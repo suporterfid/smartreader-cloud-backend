@@ -61,6 +61,11 @@ Ensure you have the following installed:
    MONGO_URI=mongodb://mongo:27017/smartreader
    MQTT_URL=mqtt://mosquitto:1883
    API_KEY=YOUR_DEFAULT_API_KEY
+   TOPIC_EVENTS=smartreader/+/events
+   TOPIC_COMMAND_CONTROL_RESPONSE=smartreader/+/command/control/response
+   TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
+   TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
+   TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
    ```
 
 ---
