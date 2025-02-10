@@ -1,0 +1,9 @@
+{
+  "_type": "environment",
+  "name": "SmartReader Cloud API Environment",
+  "data": {
+    "apiKey": "EXAMPLE_API_KEY",
+    "deviceSerial": "37022341016",
+    "keyId": "EXAMPLE_API_KEY"
+  }
+}

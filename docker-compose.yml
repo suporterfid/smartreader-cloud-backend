@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"      # Porta da aplicação
+      - "9229:9229"      # Porta de depuração (inspect)
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/smartreader
+      - MQTT_URL=mqtt://mosquitto:1883
+      - API_KEY=EXAMPLE_API_KEY
+      - TOPIC_EVENTS=smartreader/+/events
+      - TOPIC_COMMAND_CONTROL_RESPONSE=smartreader/+/command/control/response
+      - TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
+      - TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
+      - TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
+    volumes:
+      - ./:/app         # Monta o diretório atual dentro do container
+    depends_on:
+      - mongo
+      - mosquitto
+
+  mongo:
+    image: mongo:6.0
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+
+  mosquitto:
+    image: eclipse-mosquitto:1.6.15
+    restart: always
+    ports:
+      - "1883:1883"
+
+volumes:
+  mongo-data:

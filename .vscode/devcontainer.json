@@ -1,0 +1,8 @@
+{
+    "name": "NestJS Docker Dev",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/app",
+    "shutdownAction": "stopCompose"
+  }
+  
