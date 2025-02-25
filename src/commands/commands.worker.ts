@@ -16,14 +16,14 @@ export class CommandsWorker implements OnModuleInit {
   private async processNextCommand() {
     const command = await this.commandsService.getNextCommand();
     if (!command) return;
-    this.logger.log(`Executing command: ${command.commandId} with priority ${command.priority}`);
-    await this.commandsService.markCommandAsProcessing(command.commandId);
+    this.logger.log(`Executing command: ${command.command_id} with priority ${command.priority}`);
+    await this.commandsService.markCommandAsProcessing(command.command_id);
     try {
       const response = await this.executeCommand(command);
-      await this.commandsService.updateCommandStatus(command.commandId, 'success', response);
+      await this.commandsService.updateCommandStatus(command.command_id, 'success', response);
     } catch (error) {
       this.logger.error(`Command execution failed: ${error.message}`);
-      await this.commandsService.updateCommandStatus(command.commandId, 'error');
+      await this.commandsService.updateCommandStatus(command.command_id, 'error');
     }
   }
   
