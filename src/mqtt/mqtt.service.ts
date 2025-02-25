@@ -84,15 +84,31 @@ private async handleEventPayload(payload: any) {
 
 private async handleCommandResponse(deviceSerial: string, payload: any): Promise<void> {
   payload.deviceSerial = deviceSerial;
-  const { commandId, status, response } = payload;
-  if (!commandId) return;
-  this.logger.log(`Received command response for ${commandId}: ${status}`);
-  if (commandId) {
-    await this.commandsService.updateCommand(commandId, { status, response });
+  const { command, command_id, response, message, payload: commandPayload } = payload;
+
+  if (!command_id) {
+    this.logger.warn(`Received command response without command_id for device: ${deviceSerial}`);
+    return;
   }
-  await this.commandsService.updateCommandStatus(commandId, status, response);
-  this.eventEmitter.emit('mqtt.commandResponse', payload);
+
+  this.logger.log(`Received command response for ${command_id}: ${response}`);
+
+  let processedResponse: any = { response, message };
+
+  // Dynamically process any payload data
+  if (commandPayload && typeof commandPayload === 'object') {
+    processedResponse.payload = { ...commandPayload };
+    this.logger.log(`Processed payload data for command "${command}": ${JSON.stringify(processedResponse.payload)}`);
+  }
+
+  // Update the command response in database
+  await this.commandsService.updateCommand(command_id, { status: response, response: processedResponse });
+  await this.commandsService.updateCommandStatus(command_id, response, processedResponse);
+
+  // Emit event with processed response
+  this.eventEmitter.emit('mqtt.commandResponse', { ...payload, response: processedResponse });
 }
+
 
 private async flushEventBuffer() {
   if (this.eventBuffer.length === 0) return;
