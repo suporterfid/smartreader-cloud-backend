@@ -57,7 +57,6 @@ Ensure you have the following installed:
    git clone https://github.com/suporterfid/smartreader-cloud-backend.git
    cd smartreader-cloud-backend
    ```
-````
 
 2. **Install dependencies**:
 
@@ -203,6 +202,3 @@ Contributions are welcome!
 
 For support or inquiries, reach out to:  
 [Suporte RFID GitHub](https://github.com/suporterfid/smartreader-cloud-backend)
-
-
-
