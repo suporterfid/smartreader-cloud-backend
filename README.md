@@ -1,4 +1,3 @@
-````markdown
 # SmartReader Cloud Backend
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
@@ -207,4 +206,3 @@ For support or inquiries, reach out to:
 
 ```
 
-```
