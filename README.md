@@ -204,5 +204,5 @@ Contributions are welcome!
 For support or inquiries, reach out to:  
 [Suporte RFID GitHub](https://github.com/suporterfid/smartreader-cloud-backend)
 
-```
+
 
