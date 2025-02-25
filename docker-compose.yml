@@ -38,6 +38,8 @@ services:
     restart: always
     ports:
       - "1883:1883"
+    networks:
+      - internal_network   
 
 networks:
   internal_network:
