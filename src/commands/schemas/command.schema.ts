@@ -5,7 +5,7 @@ export type CommandDocument = Command & Document;
 @Schema({ timestamps: true, collection: 'deviceCommands' })
 export class Command {
   @Prop({ required: true })
-  commandId: string; // Unique command identifier
+  command_id: string; // Unique command identifier
 
   @Prop({ required: true })
   type: string; // "control" or "management"

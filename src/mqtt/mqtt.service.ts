@@ -84,7 +84,7 @@ export class MqttService implements OnModuleInit {
       await this.flushEventBuffer();
     }
   }
-  
+
   private async handleCommandResponse(deviceSerial: string, payload: any): Promise<void> {
     payload.deviceSerial = deviceSerial;
     const { command, command_id, response, message, payload: commandPayload } = payload;
@@ -156,7 +156,7 @@ export class MqttService implements OnModuleInit {
     command.deviceSerial = deviceSerial;
 
     this.commandsService.createCommand({
-      commandId: command.commandId,
+      command_id: command.commandId,
       type,
       deviceSerial,
       payload: command,
