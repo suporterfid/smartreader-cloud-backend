@@ -101,13 +101,28 @@ private async handleCommandResponse(deviceSerial: string, payload: any): Promise
     this.logger.log(`Processed payload data for command "${command}": ${JSON.stringify(processedResponse.payload)}`);
   }
 
-  // Update the command response in database
-  await this.commandsService.updateCommand(command_id, { status: response, response: processedResponse });
-  await this.commandsService.updateCommandStatus(command_id, response, processedResponse);
+  // Determine the appropriate status based on the response content
+  let status = 'unknown'; // Default status if response is unrecognized
+  if (typeof response === 'string') {
+    if (response.toLowerCase() === 'success') {
+      status = 'completed';
+    } else if (response.toLowerCase() === 'error' || response.toLowerCase() === 'failed') {
+      status = 'failed';
+    } else if (response.toLowerCase() === 'pending') {
+      status = 'pending';
+    }
+  }
+
+  this.logger.log(`Updating command status for ${command_id}: ${status}`);
+
+  // Update the command response in database with the determined status
+  await this.commandsService.updateCommand(command_id, { status, response: processedResponse });
+  await this.commandsService.updateCommandStatus(command_id, status, processedResponse);
 
   // Emit event with processed response
   this.eventEmitter.emit('mqtt.commandResponse', { ...payload, response: processedResponse });
 }
+
 
 
 private async flushEventBuffer() {
