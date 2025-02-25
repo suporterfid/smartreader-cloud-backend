@@ -1,3 +1,4 @@
+````markdown
 # SmartReader Cloud Backend
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
@@ -6,11 +7,16 @@ A backend application for managing, monitoring, and interacting with IoT and RFI
 ## 🌐 Features
 
 - **API Key Authentication:** Secure access using API keys with customizable permissions.
+- **Role-Based Access Control (RBAC):** Assigns `admin`, `operator`, and `viewer` roles for fine-grained access.
+- **Rate Limiting:** Uses `nestjs/throttler` to enforce per-role API rate limits.
+- **Device Management:** Register, update, and monitor IoT and RFID devices.
 - **MQTT Communication:** Send control and management commands to devices and receive events in real time.
-- **Device Monitoring:** Track device availability, offline status, and system performance.
-- **Event Management:** Capture and store device-generated events for analysis and reporting.
-- **Dashboard Metrics:** Expose metrics like uptime, CPU/memory utilization, and antenna status.
+- **Event Tracking:** Stores and processes device-generated events.
+- **Metrics & Monitoring:** Tracks system load, uptime, resource usage, and device connectivity.
+- **Webhook Integration:** Allows external services to subscribe to real-time device events.
+- **Prometheus & Grafana Integration:** Provides real-time system monitoring with a `/metrics` endpoint for Prometheus scraping.
 - **Swagger API Documentation:** Built-in API documentation for easy exploration and testing.
+- **Postman Collection:** [API cURL Examples](api-curl-examples.md) included for easy API testing.
 
 ---
 
@@ -18,12 +24,15 @@ A backend application for managing, monitoring, and interacting with IoT and RFI
 
 The system follows a modular structure using **NestJS** modules, making it highly maintainable and scalable:
 
-- **ApiKeys Module:** Manages API key creation and validation.
+- **ApiKeys Module:** Manages API key creation, validation, and role-based access.
+- **Auth Module:** Provides middleware for API key authentication and RBAC enforcement.
+- **Throttler Module:** Implements request throttling based on user roles.
 - **MQTT Module:** Handles MQTT communication with devices.
 - **Events Module:** Stores and processes device-generated events.
-- **Commands Module:** Handles device commands (control and management).
-- **Metrics Module:** Provides performance metrics and system status.
-- **Monitoring Module:** Monitors device connectivity and triggers offline checks.
+- **Commands Module:** Manages control and management commands for IoT devices.
+- **Metrics Module:** Provides system performance metrics and device uptime tracking.
+- **Monitoring Module:** Monitors device connectivity and offline status.
+- **Webhooks Module:** Manages webhook subscriptions and event dispatching.
 
 ---
 
@@ -34,6 +43,7 @@ The system follows a modular structure using **NestJS** modules, making it highl
 Ensure you have the following installed:
 
 - **Node.js** (v18+ recommended)
+- **pnpm** (if not installed, run `corepack enable && corepack prepare pnpm@latest --activate`)
 - **Docker** and **Docker Compose**  
   Optional:
 - **MongoDB** (if running locally without Docker)
@@ -48,11 +58,12 @@ Ensure you have the following installed:
    git clone https://github.com/suporterfid/smartreader-cloud-backend.git
    cd smartreader-cloud-backend
    ```
+````
 
 2. **Install dependencies**:
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Configure the environment**:  
@@ -60,7 +71,7 @@ Ensure you have the following installed:
    ```plaintext
    MONGO_URI=mongodb://mongo:27017/smartreader
    MQTT_URL=mqtt://mosquitto:1883
-   API_KEY=YOUR_DEFAULT_API_KEY
+   API_KEY=EXAMPLE_API_KEY
    TOPIC_EVENTS=smartreader/+/events
    TOPIC_COMMAND_CONTROL_RESPONSE=smartreader/+/command/control/response
    TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
@@ -89,6 +100,9 @@ Access the interactive API documentation at:
 [http://localhost:3000/api](http://localhost:3000/api)  
 The documentation is powered by **Swagger UI**.
 
+For detailed **cURL examples**, see:  
+[API cURL Examples](api-curl-examples.md)
+
 ---
 
 ### 🛠️ Development
@@ -96,13 +110,13 @@ The documentation is powered by **Swagger UI**.
 For development with live reload and debugging enabled:
 
 ```bash
-npm run start:dev
+pnpm run start:dev
 ```
 
 To debug using the Node.js inspector:
 
 ```bash
-npm run start:dev:debug
+pnpm run start:dev:debug
 ```
 
 ---
@@ -122,122 +136,6 @@ npm run start:dev:debug
 
 ---
 
-### 🔗 Basic API calls
-
-#### 1. Get API Status
-
-```bash
-curl -X GET http://localhost:3000/api/status -H "x-api-key: EXAMPLE_API_KEY"
-```
-
-#### 2. List Devices
-
-```bash
-curl -X GET http://localhost:3000/api/devices -H "x-api-key: EXAMPLE_API_KEY"
-```
-
-#### 3. Register a New Device
-
-```bash
-curl -X POST http://localhost:3000/api/devices -H "x-api-key: EXAMPLE_API_KEY" -H "Content-Type: application/json" -d '{
-  "name": "RAIN Reader W1",
-  "type": "reader",
-  "deviceSerial": "37022341016",
-  "location": "Warehouse 1"
-}'
-```
-
-#### 4. Update Device Information
-
-```bash
-curl -X PUT http://localhost:3000/api/devices/{deviceId} -H "x-api-key: EXAMPLE_API_KEY" -H "Content-Type: application/json" -d '{
-  "name": "Updated Device Name",
-  "location": "Updated Location"
-}'
-```
-
-#### 5. Delete a Device
-
-```bash
-curl -X DELETE http://localhost:3000/api/devices/{deviceId} -H "x-api-key: EXAMPLE_API_KEY"
-```
-
-#### 6. Send a START Control Command
-
-```bash
-curl -X POST http://localhost:3000/api/devices/ABC123/control \
--H "x-api-key: EXAMPLE_API_KEY" \
--H "Content-Type: application/json" \
--d '{
-    "command": "start",
-    "command_id": "1234",
-    "payload": {}
-}'
-```
-
-#### 7. Send a STOP Control Command
-
-```bash
-curl -X POST http://localhost:3000/api/devices/ABC123/control \
--H "x-api-key: EXAMPLE_API_KEY" \
--H "Content-Type: application/json" \
--d '{
-    "command": "stop",
-    "command_id": "1234",
-    "payload": {}
-}'
-```
-
-#### 8. Send a reboot Control Command
-
-```bash
-curl -X POST http://localhost:3000/api/devices/ABC123/control \
--H "x-api-key: EXAMPLE_API_KEY" \
--H "Content-Type: application/json" \
--d '{
-    "command": "reboot",
-    "command_id": "1234",
-    "payload": {}
-}'
-```
-
-#### 9. Send a MODE Control Command
-
-```bash
-curl -X POST http://localhost:3000/api/devices/ABC123/control \
--H "x-api-key: EXAMPLE_API_KEY" \
--H "Content-Type: application/json" \
--d '{
-  "command": "mode",
-  "command_id": "12334",
-  "payload": {
-    "type": "INVENTORY",
-    "antennas": [1, 2],
-    "antennaZone": "CABINET",
-    "antennaZoneState": "enabled",
-    "transmitPower": 17.25,
-    "groupIntervalInMs": 500,
-    "rfMode": "MaxThroughput",
-    "searchMode": "single-target",
-    "session": "1",
-    "tagPopulation": 32,
-    "filter": {
-      "value": "E280",
-      "match": "prefix",
-      "operation": "include",
-      "status": "enabled"
-    },
-    "filterIncludeEpcHeaderList": {
-      "value": "E280,3031",
-      "status": "enabled"
-    },
-    "rssiFilter": {
-      "threshold": -72
-    }
-  }
-}'
-```
-
 ### 🔗 Default MQTT Topic Structure
 
 Configure your devices to communicate with the backend using the following MQTT topics:
@@ -250,34 +148,22 @@ Configure your devices to communicate with the backend using the following MQTT 
 | `smartreader/{deviceSerial}/command/management`          | Receive management commands from the backend  | `smartreader/ABC123/command/management`          |
 | `smartreader/{deviceSerial}/command/management/response` | Publish command responses back to the backend | `smartreader/ABC123/command/management/response` |
 
-#### Example Payloads:
+---
 
-**Event Publishing:**  
-Topic: `smartreader/ABC123/events`
+### 📊 Prometheus & Grafana Integration
 
-```json
-{
-  "eventType": "status",
-  "deviceSerial": "ABC123",
-  "timestamp": "2025-02-10T15:30:00Z",
-  "data": {
-    "CPUUtilization": 45,
-    "ReaderOperationalStatus": "enabled"
-  }
-}
-```
+- The application exposes system metrics for **Prometheus** at:
 
-**Command Response:**  
-Topic: `smartreader/ABC123/command/response`
+  ```
+  http://localhost:3000/metrics
+  ```
 
-```json
-{
-  "commandId": "c12345",
-  "status": "success",
-  "response": {
-    "message": "Device restarted successfully"
-  }
-}
+- **Grafana** can be configured to pull data from Prometheus for visualization.
+
+To start monitoring services:
+
+```bash
+docker-compose up -d prometheus grafana
 ```
 
 ---
@@ -285,38 +171,15 @@ Topic: `smartreader/ABC123/command/response`
 ### 🛡️ Security
 
 - **API Key Authentication**: Protects most endpoints using an API key passed via the `x-api-key` header.
-- Public endpoints are defined using the `@Public()` decorator in the codebase.
+- **RBAC (Role-Based Access Control)**: Restricts API access based on user roles (`admin`, `operator`, `viewer`).
+- **Rate Limiting**: Prevents excessive API usage per key.
+- **Webhook Signature Verification**: Ensures secure event dispatching.
 
 ---
 
 ## 📦 Project Structure
 
-```
-smartreader-cloud-backend
-├── src
-│   ├── api-keys
-│   ├── auth
-│   ├── commands
-│   ├── events
-│   ├── metrics
-│   ├── monitoring
-│   ├── mqtt
-│   └── main.ts
-├── docker-compose.yml
-├── Dockerfile
-├── package.json
-└── tsconfig.json
-```
-
----
-
-## 🧪 Testing
-
-Run tests using **Jest**:
-
-```bash
-npm run test
-```
+[Detailed project structure](project-structure.md)
 
 ---
 
@@ -341,3 +204,7 @@ Contributions are welcome!
 
 For support or inquiries, reach out to:  
 [Suporte RFID GitHub](https://github.com/suporterfid/smartreader-cloud-backend)
+
+```
+
+```

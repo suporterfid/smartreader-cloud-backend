@@ -20,8 +20,14 @@ async function bootstrap() {
         'x-api-key',
     )
     .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api', app, document);
+
+    const documentFactory = () => SwaggerModule
+    .createDocument(app, config);
+
+    SwaggerModule.setup('api', app, documentFactory);
+
+    // const document = SwaggerModule.createDocument(app, config);
+    // SwaggerModule.setup('api', app, document);
 
     await app.listen(3000);
     console.log(`Application is running on: ${await app.getUrl()}`);

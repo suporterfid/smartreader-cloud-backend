@@ -7,178 +7,148 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MqttService implements OnModuleInit {
-  private client: MqttClient;
-  private readonly logger = new Logger(MqttService.name);
-  private readonly brokerUrl = process.env.MQTT_URL || 'mqtt://localhost:1883';
+private client: MqttClient;
+private readonly logger = new Logger(MqttService.name);
+private readonly brokerUrl = process.env.MQTT_URL || 'mqtt://localhost:1883';
+private readonly eventBuffer: any[] = [];
+private readonly BATCH_SIZE = 10;
+private readonly BATCH_INTERVAL_MS = 5000;
 
-  private readonly topics = {
-    events: process.env.TOPIC_EVENTS || 'smartreader/+/events',
-    controlResponse: process.env.TOPIC_COMMAND_CONTROL_RESPONSE || 'smartreader/+/command/control/response',
-    managementResponse: process.env.TOPIC_COMMAND_MANAGEMENT_RESPONSE || 'smartreader/+/command/management/response',
-    controlPublish: process.env.TOPIC_COMMAND_CONTROL_PUBLISH || 'smartreader/{deviceSerial}/command/control',
-    managementPublish: process.env.TOPIC_COMMAND_MANAGEMENT_PUBLISH || 'smartreader/{deviceSerial}/command/management'
-  };
+private readonly topics = {
+  events: process.env.TOPIC_EVENTS || 'smartreader/+/events',
+  controlResponse: process.env.TOPIC_COMMAND_CONTROL_RESPONSE || 'smartreader/+/command/control/response',
+  managementResponse: process.env.TOPIC_COMMAND_MANAGEMENT_RESPONSE || 'smartreader/+/command/management/response',
+  controlPublish: process.env.TOPIC_COMMAND_CONTROL_PUBLISH || 'smartreader/{deviceSerial}/command/control',
+  managementPublish: process.env.TOPIC_COMMAND_MANAGEMENT_PUBLISH || 'smartreader/{deviceSerial}/command/management',
+};
 
-  constructor(
-    private readonly eventEmitter: EventEmitter2,
-    private readonly eventsService: EventsService,
-    private readonly commandsService: CommandsService,
-  ) {}
+constructor(
+  private readonly eventEmitter: EventEmitter2,
+  private readonly eventsService: EventsService,
+  private readonly commandsService: CommandsService,
+) {
+  setInterval(() => this.flushEventBuffer(), this.BATCH_INTERVAL_MS);
+}
 
-  onModuleInit() {
-    this.client = connect(this.brokerUrl);
-
-    this.client.on('connect', () => {
-      this.logger.log(`Connected to MQTT broker at ${this.brokerUrl}`);
-
-      this.client.subscribe(
-        {
-          [this.topics.events]: { qos: 0, rap: false },
-          [this.topics.controlResponse]: { qos: 0, rap: false },
-          [this.topics.managementResponse]: { qos: 0, rap: false }
-        },
-        (err) => {
-          if (err) {
-            this.logger.error('Error subscribing to topics', err);
-          } else {
-            this.logger.log(`Subscribed to topics: ${Object.values(this.topics).join(', ')}`);
-          }
-        }
-      );
-    });
-
-    this.client.on('message', async (topic: string, message: Buffer) => {
-      const msg = message.toString();
-      this.logger.log(`Message received on topic "${topic}": ${msg}`);
-      try {
-        const payload = JSON.parse(msg);
-        const parts = topic.split('/');
-        const deviceSerial = parts[1];
-
-        const expectedTopic = topic.replace(deviceSerial, '+');
-        this.logger.log(`Analyzing matches for "${expectedTopic}"`);
-        if (expectedTopic === this.topics.events) {
-          payload.deviceSerial = deviceSerial;
-          this.handleEventPayload(payload, deviceSerial);
-        } else if (expectedTopic === this.topics.controlResponse || expectedTopic === this.topics.managementResponse) {
-          payload.deviceSerial = deviceSerial;
-          const { commandId, status, response } = payload;
-          if (commandId) {
-            await this.commandsService.updateCommand(commandId, { status, response });
-          }
-          this.eventEmitter.emit('mqtt.commandResponse', payload);
+onModuleInit() {
+  this.client = connect(this.brokerUrl);
+  this.client.on('connect', () => {
+    this.logger.log(`Connected to MQTT broker at ${this.brokerUrl}`);
+    this.client.subscribe(
+      {
+        [this.topics.events]: { qos: 1 },
+        [this.topics.controlResponse]: { qos: 1 },
+        [this.topics.managementResponse]: { qos: 1 },
+      },
+      (err) => {
+        if (err) {
+          this.logger.error('Error subscribing to topics', err);
         } else {
-          this.logger.log(`Topic "${topic}" is not managed currently. No matches for ${expectedTopic}`);
+          this.logger.log(`Subscribed to topics: ${Object.values(this.topics).join(', ')}`);
         }
-
-      } catch (error) {
-        this.logger.error('Error processing MQTT message', error);
       }
-    });
+    );
+  });
 
-    this.client.on('error', (error) => {
-      this.logger.error('MQTT error', error);
-    });
-  }
-
-  publishControlCommand(deviceSerial: string, command: any): void {
-    if (!command.commandId) {
-      command.commandId = uuidv4();
+  this.client.on('message', async (topic: string, message: Buffer) => {
+    try {
+      const msg = message.toString();
+      this.logger.log(`Received MQTT message on "${topic}": ${msg}`);
+      const payload = JSON.parse(msg);
+      const parts = topic.split('/');
+      const deviceSerial = parts[1];
+      if (topic.includes('events')) {
+        payload.deviceSerial = deviceSerial;
+        this.handleEventPayload(payload);
+      } else if (topic.includes('command/control/response') || topic.includes('command/management/response')) {
+        payload.deviceSerial = deviceSerial;
+        await this.handleCommandResponse(deviceSerial, payload);       
+      }
+    } catch (error) {
+      this.logger.error('Error processing MQTT message', error);
     }
-    command.deviceSerial = deviceSerial;
-    this.commandsService
-      .createCommand({
-        commandId: command.commandId,
-        type: 'control',
-        deviceSerial: deviceSerial,
-        payload: command,
-        status: 'pending',
-      })
-      .catch((err) => this.logger.error('Error saving command to the database', err));
+  });
 
-    const topic = this.topics.controlPublish.replace('{deviceSerial}', deviceSerial);
-    const payload = JSON.stringify(command);
-    this.client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
-      if (err) {
-        this.logger.error('Error publishing control command', err);
-        this.commandsService
-          .updateCommand(command.commandId, { status: 'error' })
-          .catch((e) => this.logger.error('Error updating command status', e));
-      } else {
-        this.logger.log(`Control command published to "${topic}": ${payload}`);
-      }
-    });
+  this.client.on('error', (error) => {
+    this.logger.error('MQTT error', error);
+  });
+}
+
+private async handleEventPayload(payload: any) {
+  this.logger.log(`Buffering event: ${JSON.stringify(payload)}`);
+  this.eventBuffer.push(payload);
+  if (this.eventBuffer.length >= this.BATCH_SIZE) {
+    await this.flushEventBuffer();
   }
+}
 
-  publishManagementCommand(deviceSerial: string, command: any): void {
-    if (!command.commandId) {
-      command.commandId = uuidv4();
-    }
-    command.deviceSerial = deviceSerial;
-    this.commandsService
-      .createCommand({
-        commandId: command.commandId,
-        type: 'management',
-        deviceSerial: deviceSerial,
-        payload: command,
-        status: 'pending',
-      })
-      .catch((err) => this.logger.error('Error saving command to the database', err));
-
-    const topic = this.topics.managementPublish.replace('{deviceSerial}', deviceSerial);
-    const payload = JSON.stringify(command);
-    this.client.publish(topic, payload, { retain: false }, (err) => {
-      if (err) {
-        this.logger.error('Error publishing management command', err);
-        this.commandsService
-          .updateCommand(command.commandId, { status: 'error' })
-          .catch((e) => this.logger.error('Error updating command status', e));
-      } else {
-        this.logger.log(`Management command published to "${topic}": ${payload}`);
-      }
-    });
+private async handleCommandResponse(deviceSerial: string, payload: any): Promise<void> {
+  payload.deviceSerial = deviceSerial;
+  const { commandId, status, response } = payload;
+  if (!commandId) return;
+  this.logger.log(`Received command response for ${commandId}: ${status}`);
+  if (commandId) {
+    await this.commandsService.updateCommand(commandId, { status, response });
   }
+  await this.commandsService.updateCommandStatus(commandId, status, response);
+  this.eventEmitter.emit('mqtt.commandResponse', payload);
+}
 
-  private async handleEventPayload(payload: any, deviceSerial: string) {
-    this.logger.log(`Processing event ${payload} detected for device ${deviceSerial}`);
-    // Determine the event type
-    if (payload['smartreader-mqtt-status']) {
-      // Handle connectivity events
-      if (payload['smartreader-mqtt-status'] === 'connected') {
-        payload.eventType = 'connected';
-        this.logger.log(`Device ${deviceSerial} connected.`);
-      } else if (payload['smartreader-mqtt-status'] === 'disconnected') {
-        payload.eventType = 'disconnected';
-        this.logger.log(`Device ${deviceSerial} disconnected.`);
-      }
-    } else if (payload.tag_reads?.length === 1 && payload.tag_reads[0].epc === '*****') {
-      // Handle heartbeat events
-      payload.eventType = 'heartbeat';
-      this.logger.log(`Heartbeat event detected for device ${deviceSerial}`);
-    } else if (payload.tag_reads?.length > 0) {
-      // Handle heartbeat events
-      payload.eventType = 'tag_read';
-      this.logger.log(`Tag Event event detected for device ${deviceSerial}`);
-    } else if (payload.eventType === 'status') {
-      // Handle device status events
-      payload.eventType = 'status';
-      this.logger.log(`Status event detected for device ${deviceSerial}`);
-    } else if (payload.status && ['running', 'idle', 'armed'].includes(payload.status.toLowerCase())) {
-      // Handle inventory status events
-      payload.eventType = `inventory_status.${payload.status.toLowerCase()}`;
-      this.logger.log(`Inventory status '${payload.status}' detected for device ${deviceSerial}`);
-    } else if (payload.eventType === 'gpi-status') {
-      // Handle GPI status events
-      payload.eventType = 'gpi-status';
-      this.logger.log(`GPI status event detected for device ${deviceSerial}`);
-      payload.gpiData = payload.gpiConfigurations || [];
+private async flushEventBuffer() {
+  if (this.eventBuffer.length === 0) return;
+  try {
+    await this.eventsService.storeEventsBulk(this.eventBuffer);
+    this.logger.log(`Successfully stored ${this.eventBuffer.length} events.`);
+    this.eventBuffer.length = 0;
+  } catch (error) {
+    this.logger.error(`Error storing events in bulk: ${error.message}`);
+  }
+}
+
+publishControlCommand(deviceSerial: string, command: any): void {
+  if (!command.commandId) command.commandId = uuidv4();
+  command.deviceSerial = deviceSerial;
+  this.commandsService.createCommand({
+    commandId: command.commandId,
+    type: 'control',
+    deviceSerial: deviceSerial,
+    payload: command,
+    status: 'pending',
+  }).catch((err) => this.logger.error('Error saving command', err));
+  const topic = this.topics.controlPublish.replace('{deviceSerial}', deviceSerial);
+  const payload = JSON.stringify(command);
+  this.client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
+    if (err) {
+      this.logger.error('Error publishing control command', err);
+      this.commandsService.updateCommand(command.commandId, { status: 'error' })
+        .catch((e) => this.logger.error('Error updating command status', e));
     } else {
-      // Handle tag read events
-      payload.eventType = 'status';
-      this.logger.log(`Generic event detected for device ${deviceSerial}`);
+      this.logger.log(`Control command published to "${topic}": ${payload}`);
     }
-    this.logger.log(`Final eventType: ${payload.eventType}`);
-    await this.eventsService.storeEvent(payload);
-    this.eventEmitter.emit('mqtt.event', payload);
-  }
+  });
+}
+
+publishManagementCommand(deviceSerial: string, command: any): void {
+  if (!command.commandId) command.commandId = uuidv4();
+  command.deviceSerial = deviceSerial;
+  this.commandsService.createCommand({
+    commandId: command.commandId,
+    type: 'management',
+    deviceSerial: deviceSerial,
+    payload: command,
+    status: 'pending',
+  }).catch((err) => this.logger.error('Error saving command', err));
+  const topic = this.topics.managementPublish.replace('{deviceSerial}', deviceSerial);
+  const payload = JSON.stringify(command);
+  this.client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
+    if (err) {
+      this.logger.error('Error publishing management command', err);
+      this.commandsService.updateCommand(command.commandId, { status: 'error' })
+        .catch((e) => this.logger.error('Error updating command status', e));
+    } else {
+      this.logger.log(`Management command published to "${topic}": ${payload}`);
+    }
+  });
+}
+
 }

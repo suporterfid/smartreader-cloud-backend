@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+// src\devices\devices.service.ts
+import { Injectable, NotFoundException, BadRequestException  } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Device, DeviceDocument } from './schemas/device.schema';
@@ -28,5 +29,33 @@ export class DevicesService {
 
   async deleteDevice(deviceId: string): Promise<Device | null> {
     return this.deviceModel.findByIdAndDelete(deviceId).exec();
+  }
+
+  async updateFirmwareVersion(deviceSerial: string, firmwareVersion: string): Promise<Device> {
+    if (!firmwareVersion) throw new BadRequestException('Firmware version is required');
+      const device = await this.deviceModel.findOne({ deviceSerial });
+      if (!device) throw new NotFoundException('Device not found');
+      device.firmwareVersion = firmwareVersion;
+    await device.save();
+      return device;
+  }
+
+  async updateDeviceConfiguration(
+    deviceSerial: string,
+    configUpdate: Partial<{ networkSettings: any; ledControl: any; operationalMode: string }>
+  ): Promise<Device> {
+    const device = await this.deviceModel.findOne({ deviceSerial });
+      if (!device) throw new NotFoundException('Device not found');
+      if (configUpdate.networkSettings) {
+      device.networkSettings = { ...device.networkSettings, ...configUpdate.networkSettings };
+    }
+      if (configUpdate.ledControl) {
+      device.ledControl = { ...device.ledControl, ...configUpdate.ledControl };
+    }
+      if (configUpdate.operationalMode) {
+      device.operationalMode = configUpdate.operationalMode;
+    }
+      await device.save();
+    return device;
   }
 }

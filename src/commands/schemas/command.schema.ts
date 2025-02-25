@@ -1,19 +1,17 @@
-// src/commands/schemas/command.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-
 export type CommandDocument = Command & Document;
 
 @Schema({ timestamps: true, collection: 'deviceCommands' })
 export class Command {
   @Prop({ required: true })
-  commandId: string; // Identificador único do comando
+  commandId: string; // Unique command identifier
 
   @Prop({ required: true })
-  type: string; // "control" ou "management"
+  type: string; // "control" or "management"
 
   @Prop({ required: true })
-  deviceSerial: string; // Serial do dispositivo associado
+  deviceSerial: string; // Associated device serial number
 
   @Prop({ type: Object, required: true })
   payload: any;
@@ -22,7 +20,13 @@ export class Command {
   status: string; // Ex: pending, success, error
 
   @Prop({ type: Object })
-  response?: any; // Dados da resposta, se houver
+  response?: any; // Response data, if available
+
+  @Prop({ enum: ['low', 'medium', 'high'], default: 'medium' })
+  priority: string; // Command execution priority
+  
+  @Prop({ type: Date, default: null })
+  executeAt?: Date; // Scheduled execution timestamp
 }
 
 export const CommandSchema = SchemaFactory.createForClass(Command);

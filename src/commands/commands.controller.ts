@@ -1,4 +1,5 @@
-import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
+// src\commands\commands.controller.ts
+import { Controller, Get, Query, Param, Post, Body, Logger } from '@nestjs/common';
 import { CommandsService } from './commands.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam, ApiResponse, ApiSecurity } from '@nestjs/swagger';
 
@@ -47,5 +48,31 @@ export class CommandsController {
     this.logger.log(`Retrieved command: ${JSON.stringify(command)}`);
     return command;
   }
+
+  @Post()
+  async createCommand(
+    @Body('deviceSerial') deviceSerial: string,
+    @Body('type') type: string,
+    @Body('payload') payload: any,
+    @Body('priority') priority?: string,
+    @Body('executeAt') executeAt?: string,
+  ) {
+    const commandData = {
+      deviceSerial,
+      type,
+      payload,
+      priority: priority || 'medium',
+      executeAt: executeAt ? new Date(executeAt) : undefined,
+      status: 'pending',
+    };
+
+    return this.commandsService.createCommand(commandData);
+  }
+
+  @Get(':commandId/status')
+  async getCommandStatus(@Param('commandId') commandId: string) {
+    return this.commandsService.getCommandStatus(commandId);
+  }
+
 }
 

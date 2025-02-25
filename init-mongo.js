@@ -1,3 +1,4 @@
+// init-mongo.js
 db = db.getSiblingDB("smartreader");  // Replace "smartreader" if using a different database
 
 db.createUser({

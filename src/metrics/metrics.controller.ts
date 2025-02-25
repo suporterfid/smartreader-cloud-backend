@@ -1,6 +1,9 @@
+// src\metrics\metrics.controller.ts
 import { Controller, Get, Query, BadRequestException, Logger } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
+import { PrometheusService } from './prometheus.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+
 
 @ApiTags('Metrics')
 @ApiSecurity('x-api-key')
@@ -8,7 +11,10 @@ import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiSecurity } from '@nest
 export class MetricsController {
   private readonly logger = new Logger(MetricsController.name);
 
-  constructor(private readonly metricsService: MetricsService) {}
+  constructor(
+    private readonly metricsService: MetricsService,
+    private readonly prometheusService: PrometheusService
+  ) {}
 
   @Get('reader')
   @ApiOperation({ summary: 'Get RFID reader metrics' })
@@ -58,6 +64,31 @@ export class MetricsController {
     const result = await this.metricsService.getOfflineDevices(parseInt(minutes, 10));
     this.logger.log(`Retrieved ${result.length} offline device(s)`);
     return result;
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Retrieve system metrics history within a given time range' })
+  @ApiQuery({ name: 'from', required: false, description: 'Start date for filtering metrics (ISO 8601 format)' })
+  @ApiQuery({ name: 'to', required: false, description: 'End date for filtering metrics (ISO 8601 format)' })
+  @ApiResponse({ status: 200, description: 'List of system metrics within the specified time range' })
+  async getMetricsHistory(
+    @Query('from') from?: string,
+    @Query('to') to?: string
+  ) {
+    this.logger.log(`Fetching system metrics from ${from || 'beginning'} to ${to || 'now'}`);
+    const result = await this.metricsService.getMetricsHistory(
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined
+    );
+    this.logger.log(`Retrieved ${result.length} metric records`);
+    return result;
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Retrieve Prometheus system metrics' })
+  @ApiResponse({ status: 200, description: 'Prometheus-formatted metrics' })
+  async getMetrics() {
+    return this.prometheusService.getMetrics();
   }
 }
 

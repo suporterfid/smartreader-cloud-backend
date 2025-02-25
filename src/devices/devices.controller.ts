@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Put, Delete, Param, Body, Logger } from '@nestjs/common';
+// src\devices\devices.controller.ts
+import { Controller, Patch, Post, Get, Put, Delete, Param, Body, Logger } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { MqttService } from '../mqtt/mqtt.service';
 import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiSecurity } from '@nestjs/swagger';
@@ -64,5 +65,21 @@ export class DevicesController {
     const result = await this.devicesService.deleteDevice(deviceId);
     this.logger.log(`Device deleted: ${deviceId}`);
     return result;
+  }
+
+  @Patch(':deviceSerial/firmware')
+  async updateFirmwareVersion(
+    @Param('deviceSerial') deviceSerial: string,
+    @Body('firmwareVersion') firmwareVersion: string,
+  ) {
+    return this.devicesService.updateFirmwareVersion(deviceSerial, firmwareVersion);
+  }
+
+  @Patch(':deviceSerial/configuration')
+  async updateDeviceConfiguration(
+    @Param('deviceSerial') deviceSerial: string,
+    @Body() configUpdate: Partial<{ networkSettings: any; ledControl: any; operationalMode: string }>
+  ) {
+    return this.devicesService.updateDeviceConfiguration(deviceSerial, configUpdate);
   }
 }

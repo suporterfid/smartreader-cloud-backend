@@ -1,11 +1,13 @@
 // src/app.module.ts
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, OnModuleInit  } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 
+import { ClaimTokensModule } from './claim-tokens/claim-tokens.module';
 import { DevicesModule } from './devices/devices.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { ApiKeyGuard } from './auth/api-key.guard';
@@ -14,6 +16,10 @@ import { EventsModule } from './events/events.module';
 import { CommandsModule } from './commands/commands.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { AuthMiddleware } from './auth/middleware/auth.middleware';
+import { DeviceLogsModule } from './device-logs/device-logs.module';
+import { ApiKeysService } from './api-keys/api-keys.service';
 
 @Module({
   imports: [
@@ -21,13 +27,24 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(), // Habilita o agendamento
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/smartreader'),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 10,
+        },
+      ],
+    }),
+    ClaimTokensModule,
     ApiKeysModule,
     MqttModule,
     EventsModule,
     CommandsModule,
     MetricsModule,
     MonitoringModule,
-    DevicesModule
+    DevicesModule,
+    WebhooksModule,
+    DeviceLogsModule
   ],
   providers: [
     {
@@ -36,4 +53,15 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     },
   ],
 })
-export class AppModule {}
+
+export class AppModule implements NestModule, OnModuleInit  {
+  constructor(private readonly apiKeysService: ApiKeysService) {}
+  
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('*');
+  }
+
+  async onModuleInit() {
+    await this.apiKeysService.ensureDefaultApiKey();
+  }
+}

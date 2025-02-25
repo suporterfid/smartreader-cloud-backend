@@ -1,3 +1,4 @@
+// src\events\events.controller.ts
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiSecurity } from '@nestjs/swagger';
@@ -64,5 +65,26 @@ export class EventsController {
       this.logger.error('Error retrieving events', error);
       throw error;
     }
+  }
+  
+  @Get()
+  async getFilteredEvents(
+    @Query('deviceSerial') deviceSerial?: string,
+    @Query('epcPrefix') epcPrefix?: string,
+    @Query('antenna') antenna?: string,
+    @Query('rssiMin') rssiMin?: string,
+    @Query('rssiMax') rssiMax?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string
+  ) {
+    return this.eventsService.getFilteredEvents(
+      deviceSerial,
+      epcPrefix,
+      antenna ? parseInt(antenna, 10) : undefined,
+      rssiMin ? parseFloat(rssiMin) : undefined,
+      rssiMax ? parseFloat(rssiMax) : undefined,
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined
+    );
   }
 }

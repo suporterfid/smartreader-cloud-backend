@@ -9,6 +9,6 @@ import { ApiKeysController } from './api-keys.controller';
   imports: [MongooseModule.forFeature([{ name: ApiKey.name, schema: ApiKeySchema }])],
   providers: [ApiKeysService],
   controllers: [ApiKeysController],
-  exports: [ApiKeysService],
+  exports: [ApiKeysService, MongooseModule],
 })
 export class ApiKeysModule {}

@@ -1,12 +1,60 @@
+// src\metrics\metrics.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Event, EventDocument } from '../events/schemas/event.schema';
+import { SystemMetrics, SystemMetricsDocument } from './schemas/system-metrics.schema';
+import * as os from 'os';
 
 @Injectable()
 export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
-  constructor(@InjectModel(Event.name) private eventModel: Model<EventDocument>) {}
+  private readonly METRICS_INTERVAL_MS = 10000; // 10 seconds
+
+  constructor(
+    @InjectModel(Event.name) private eventModel: Model<EventDocument>,
+    @InjectModel(SystemMetrics.name) private metricsModel: Model<SystemMetricsDocument>
+  ) {}
+
+  onModuleInit() {
+    this.logger.log('Starting system metrics monitoring...');
+    setInterval(() => this.collectAndStoreMetrics(), this.METRICS_INTERVAL_MS);
+  }
+
+  private async collectAndStoreMetrics(): Promise<void> {
+    const metrics = {
+      cpuLoad: this.getCpuLoad(),
+      memoryUsage: this.getMemoryUsage(),
+      uptime: os.uptime(),
+    };
+  
+    try {
+      await this.metricsModel.create(metrics);
+      this.logger.log(`Stored system metrics: ${JSON.stringify(metrics)}`);
+    } catch (error) {
+      this.logger.error('Error storing system metrics', error);
+    }
+  }
+  
+  private getCpuLoad(): number {
+    const load = os.loadavg();
+    return Math.round(load[0] * 100) / 100; // 1-minute average CPU load
+   }
+  
+  private getMemoryUsage(): number {
+    return Math.round((os.totalmem() - os.freemem()) / 1024 / 1024); // Convert to MB
+  }
+  
+  async getMetricsHistory(from?: Date, to?: Date): Promise<SystemMetrics[]> {
+    const filter: any = {};
+    if (from || to) {
+      filter.timestamp = {};
+      if (from) filter.timestamp.$gte = from;
+      if (to) filter.timestamp.$lte = to;
+    }
+  
+    return this.metricsModel.find(filter).sort({ timestamp: -1 }).exec();
+  }
 
   async getReaderMetrics(query: any): Promise<any> {
     const { deviceSerial, from, to } = query;
