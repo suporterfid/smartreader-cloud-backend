@@ -20,13 +20,20 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { AuthMiddleware } from './auth/middleware/auth.middleware';
 import { DeviceLogsModule } from './device-logs/device-logs.module';
 import { ApiKeysService } from './api-keys/api-keys.service';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(), // Habilita o agendamento
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/smartreader'),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/smartreader', {
+        retryWrites: true,
+        w: 'majority',
+        serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+        socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    }),
+
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -44,7 +51,8 @@ import { ApiKeysService } from './api-keys/api-keys.service';
     MonitoringModule,
     DevicesModule,
     WebhooksModule,
-    DeviceLogsModule
+    DeviceLogsModule,
+    AuthModule
   ],
   providers: [
     {

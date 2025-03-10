@@ -4,7 +4,13 @@ FROM node:20-bullseye
 # Create app directory
 WORKDIR /usr/src/app
 
-RUN apt update && apt install -y bash
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -12,22 +18,22 @@ RUN npm install -g pnpm
 # Install nodemon globally for hot reload
 RUN npm install -g nodemon
 
-# Copy package files
-COPY package*.json pnpm-lock.yaml ./
+# Copy package files first
+COPY package*.json ./
 
-# Install dependencies
-RUN pnpm install
+# Install dependencies without bcrypt
+RUN pnpm install --ignore-scripts
 
-# Bundle app source
+# Copy all source files
 COPY . .
-RUN rm -rf node_modules && pnpm install
 
-# Build
+# Install and build bcrypt specifically
+RUN npm install bcrypt@5.1.1 --build-from-source
+
+# Build the application
 RUN pnpm run build
 
 EXPOSE 3001
 
-# Change this to use 'start' instead of 'start:prod'
-# CMD ["pnpm", "start"]
 # Start the application with nodemon for hot reloading
 CMD ["nodemon", "--watch", ".", "--inspect=0.0.0.0:9229", "dist/main.js"]
