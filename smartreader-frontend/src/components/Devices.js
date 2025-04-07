@@ -231,11 +231,11 @@ function Devices() {
               </label>
               <input
                 type="text"
-                id="serial"
+                id="deviceSerial"
                 className="input-field mt-1"
                 placeholder="Enter serial number"
                 value={newDevice.deviceSerial}
-                onChange={(e) => setNewDevice({ ...newDevice, serial: e.target.value })}
+                onChange={(e) => setNewDevice({ ...newDevice, deviceSerial: e.target.value })}
                 required
               />
             </div>
