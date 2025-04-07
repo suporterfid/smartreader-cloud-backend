@@ -8,6 +8,7 @@ function Devices() {
     serial: '', 
     location: '', 
     status: '',
+    type: 'reader', 
     modeConfig: {
       type: 'INVENTORY',
       antennas: [1, 2],
@@ -31,13 +32,19 @@ function Devices() {
   const addDevice = async (e) => {
     e.preventDefault();
     try {
-      const response = await deviceService.post('/devices', newDevice);
-      setDevices([...devices, response.data]);
+      // Use the new specific method instead of the generic post
+      const response = await deviceService.addDevice(newDevice);
+      
+      // Add some debugging
+      console.log('Device added successfully:', response);
+      
+      setDevices([...devices, response]);
       setNewDevice({ 
         name: '', 
         serial: '', 
         location: '', 
         status: '',
+        type: 'reader', 
         modeConfig: {
           type: 'INVENTORY',
           antennas: [1, 2],
@@ -48,6 +55,10 @@ function Devices() {
       setIsFormOpen(false);
     } catch (error) {
       console.error('Error adding device:', error);
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+      }
     }
   };
 
