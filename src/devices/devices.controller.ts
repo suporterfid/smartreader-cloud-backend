@@ -49,6 +49,7 @@ export class DevicesController {
     return devices;
   }
 
+  
   @Put(':deviceId')
   @ApiOperation({ summary: 'Update device information' })
   async updateDevice(@Param('deviceId') deviceId: string, @Body() updateData: any) {

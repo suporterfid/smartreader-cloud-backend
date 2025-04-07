@@ -1,5 +1,5 @@
 // src\devices\devices.service.ts
-import { Injectable, NotFoundException, BadRequestException  } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger   } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Device, DeviceDocument } from './schemas/device.schema';
@@ -7,6 +7,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class DevicesService {
+
+  private readonly logger = new Logger(DevicesService.name);
+  
   constructor(@InjectModel(Device.name) private deviceModel: Model<DeviceDocument>) {}
 
   async createDevice(deviceData: Partial<Device>): Promise<Device> {
@@ -24,12 +27,47 @@ export class DevicesService {
   }
 
   async updateDevice(deviceId: string, updateData: Partial<Device>): Promise<Device | null> {
-    return this.deviceModel.findByIdAndUpdate(deviceId, updateData, { new: true }).exec();
+    try {
+      // Prevent updating deviceSerial if it's included in updateData
+      if (updateData.deviceSerial) {
+        delete updateData.deviceSerial;
+      }
+
+      const device = await this.deviceModel.findByIdAndUpdate(
+        deviceId, 
+        updateData, 
+        { new: true, runValidators: true }
+      ).exec();
+
+      if (!device) {
+        this.logger.warn(`Device with ID ${deviceId} not found for update`);
+        return null;
+      }
+
+      return device;
+    } catch (error) {
+      this.logger.error(`Error updating device with ID ${deviceId}: ${error.message}`, error.stack);
+      if (error.name === 'ValidationError') {
+        throw new BadRequestException(`Invalid device data: ${error.message}`);
+      }
+      throw error;
+    }
   }
 
   async deleteDevice(deviceId: string): Promise<Device | null> {
-    return this.deviceModel.findByIdAndDelete(deviceId).exec();
+    try {
+      const device = await this.deviceModel.findByIdAndDelete(deviceId).exec();
+      if (!device) {
+        this.logger.warn(`Device with ID ${deviceId} not found for deletion`);
+        return null;
+      }
+      return device;
+    } catch (error) {
+      this.logger.error(`Error deleting device with ID ${deviceId}: ${error.message}`, error.stack);
+      throw error;
+    }
   }
+
 
   async updateFirmwareVersion(deviceSerial: string, firmwareVersion: string): Promise<Device> {
     if (!firmwareVersion) throw new BadRequestException('Firmware version is required');

@@ -8,7 +8,6 @@ function Devices() {
     deviceSerial: '', 
     location: '', 
     status: '',
-    type: 'reader', 
     modeConfig: {
       type: 'INVENTORY',
       antennas: [1, 2],
@@ -19,6 +18,8 @@ function Devices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [filterText, setFilterText] = useState('');
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
 
   const fetchDevices = async () => {
     try {
@@ -32,19 +33,13 @@ function Devices() {
   const addDevice = async (e) => {
     e.preventDefault();
     try {
-      // Use the new specific method instead of the generic post
-      const response = await deviceService.addDevice(newDevice);
-      
-      // Add some debugging
-      console.log('Device added successfully:', response);
-      
-      setDevices([...devices, response]);
+      const response = await deviceService.post('/devices', newDevice);
+      setDevices([...devices, response.data]);
       setNewDevice({ 
         name: '', 
         deviceSerial: '', 
         location: '', 
         status: '',
-        type: 'reader', 
         modeConfig: {
           type: 'INVENTORY',
           antennas: [1, 2],
@@ -55,10 +50,6 @@ function Devices() {
       setIsFormOpen(false);
     } catch (error) {
       console.error('Error adding device:', error);
-      // Log more details about the error
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-      }
     }
   };
 
@@ -68,6 +59,33 @@ function Devices() {
       setDevices(devices.filter(device => device.id !== id));
     } catch (error) {
       console.error('Error deleting device:', error);
+    }
+  };
+
+  const handleEditDevice = (device) => {
+    setEditingDevice({
+      ...device,
+      modeConfig: {
+        ...device.modeConfig,
+        antennas: Array.isArray(device.modeConfig.antennas) 
+          ? device.modeConfig.antennas 
+          : [device.modeConfig.antennas]
+      }
+    });
+    setIsEditFormOpen(true);
+  };
+
+  const updateDevice = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await deviceService.put(`/devices/${editingDevice.id}`, editingDevice);
+      setDevices(devices.map(device => 
+        device.id === editingDevice.id ? response.data : device
+      ));
+      setIsEditFormOpen(false);
+      setEditingDevice(null);
+    } catch (error) {
+      console.error('Error updating device:', error);
     }
   };
 
@@ -127,7 +145,7 @@ function Devices() {
     try {
       if (command === 'start') {
         await Promise.all(selectedDevices.map(deviceSerial => {
-          const device = devices.find(d => d.serial === deviceSerial);
+          const device = devices.find(d => d.deviceSerial === deviceSerial);
           return sendStartCommand(deviceSerial, device.modeConfig);
         }));
       } else if (command === 'stop') {
@@ -145,17 +163,12 @@ function Devices() {
     fetchDevices();
   }, []);
 
-  const filteredDevices = devices.filter(device => {
-    // Skip filtering if device is undefined or null
-    if (!device) return false;
-    
-    // Check if the device has each property before attempting to use toLowerCase()
-    const nameMatch = device.name ? device.name.toLowerCase().includes(filterText.toLowerCase()) : false;
-    const serialMatch = device.deviceSerial ? device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) : false;
-    const locationMatch = device.location ? device.location.toLowerCase().includes(filterText.toLowerCase()) : false;
-    
-    return nameMatch || serialMatch || locationMatch;
-  });
+  const filteredDevices = devices.filter(device => 
+    device.name.toLowerCase().includes(filterText.toLowerCase()) ||
+    device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) ||
+    device.location.toLowerCase().includes(filterText.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -231,7 +244,7 @@ function Devices() {
               />
             </div>
             <div>
-              <label htmlFor="serial" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="deviceSerial" className="block text-sm font-medium text-gray-700">
                 Serial Number
               </label>
               <input
@@ -351,6 +364,150 @@ function Devices() {
         </div>
       )}
 
+      {/* Edit Device Form */}
+      {isEditFormOpen && editingDevice && (
+        <div className="card">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Edit Device</h2>
+          <form onSubmit={updateDevice} className="space-y-4">
+            <div>
+              <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700">
+                Device Name
+              </label>
+              <input
+                type="text"
+                id="edit-name"
+                className="input-field mt-1"
+                placeholder="Enter device name"
+                value={editingDevice.name}
+                onChange={(e) => setEditingDevice({ ...editingDevice, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-serial" className="block text-sm font-medium text-gray-700">
+                Serial Number
+              </label>
+              <input
+                type="text"
+                id="edit-serial"
+                className="input-field mt-1"
+                placeholder="Enter serial number"
+                value={editingDevice.deviceSerial}
+                onChange={(e) => setEditingDevice({ ...editingDevice, deviceSerial: e.target.value })}
+                required
+                disabled
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-location" className="block text-sm font-medium text-gray-700">
+                Location
+              </label>
+              <input
+                type="text"
+                id="edit-location"
+                className="input-field mt-1"
+                placeholder="Enter device location"
+                value={editingDevice.location}
+                onChange={(e) => setEditingDevice({ ...editingDevice, location: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-status" className="block text-sm font-medium text-gray-700">
+                Status
+              </label>
+              <select
+                id="edit-status"
+                className="input-field mt-1"
+                value={editingDevice.status}
+                onChange={(e) => setEditingDevice({ ...editingDevice, status: e.target.value })}
+                required
+              >
+                <option value="">Select status</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Mode Configuration</label>
+              <div className="space-y-2 mt-1">
+                <div>
+                  <label className="text-xs text-gray-500">Type</label>
+                  <input
+                    type="text"
+                    className="input-field mt-1"
+                    value={editingDevice.modeConfig.type}
+                    onChange={(e) => setEditingDevice({
+                      ...editingDevice,
+                      modeConfig: { ...editingDevice.modeConfig, type: e.target.value }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Antennas (comma-separated)</label>
+                  <input
+                    type="text"
+                    className="input-field mt-1"
+                    value={editingDevice.modeConfig.antennas.join(',')}
+                    onChange={(e) => setEditingDevice({
+                      ...editingDevice,
+                      modeConfig: {
+                        ...editingDevice.modeConfig,
+                        antennas: e.target.value.split(',').map(Number).filter(n => !isNaN(n))
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Antenna Zone</label>
+                  <input
+                    type="text"
+                    className="input-field mt-1"
+                    value={editingDevice.modeConfig.antennaZone}
+                    onChange={(e) => setEditingDevice({
+                      ...editingDevice,
+                      modeConfig: { ...editingDevice.modeConfig, antennaZone: e.target.value }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Transmit Power</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    className="input-field mt-1"
+                    value={editingDevice.modeConfig.transmitPower}
+                    onChange={(e) => setEditingDevice({
+                      ...editingDevice,
+                      modeConfig: { ...editingDevice.modeConfig, transmitPower: parseFloat(e.target.value) }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditFormOpen(false);
+                  setEditingDevice(null);
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Devices Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredDevices.map((device) => (
@@ -381,14 +538,20 @@ function Devices() {
                 <span className="font-medium">Location:</span> {device.location}
               </p>
             </div>
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-6 flex justify-between">
               <button
-                onClick={() => deleteDevice(device.id)}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                onClick={() => handleEditDevice(device)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
-                Delete
+                Edit
               </button>
               <div className="space-x-3">
+                <button
+                  onClick={() => deleteDevice(device.id)}
+                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                >
+                  Delete
+                </button>
                 <button
                   onClick={() => sendStartCommand(device.deviceSerial, device.modeConfig)}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"

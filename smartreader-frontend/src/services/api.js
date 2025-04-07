@@ -11,23 +11,30 @@ const api = axios.create({
   }
 });
 
-
 export const deviceService = {
   getDevices: async () => {
     const response = await api.get('/devices');
     return response.data;
   },
 
-  // Add this generic post method
-  post: async (endpoint, data) => {
-    const response = await api.post(endpoint, data);
+  getDeviceById: async (id) => {
+    const response = await api.get(`/devices/${id}`);
     return response.data;
   },
 
-  // Add this function to your deviceService
-  addDevice: async (deviceData) => {
-    const response = await api.post('/devices', deviceData);
-    return response.data;
+  post: async (endpoint, data) => {
+    const response = await api.post(endpoint, data);
+    return response;
+  },
+
+  put: async (endpoint, data) => {
+    const response = await api.put(endpoint, data);
+    return response;
+  },
+
+  delete: async (endpoint) => {
+    const response = await api.delete(endpoint);
+    return response;
   },
 
   sendStartCommand: async (deviceSerial) => {
