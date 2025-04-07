@@ -145,12 +145,17 @@ function Devices() {
     fetchDevices();
   }, []);
 
-  const filteredDevices = devices.filter(device => 
-    device.name.toLowerCase().includes(filterText.toLowerCase()) ||
-    device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) ||
-    device.location.toLowerCase().includes(filterText.toLowerCase())
-  );
-
+  const filteredDevices = devices.filter(device => {
+    // Skip filtering if device is undefined or null
+    if (!device) return false;
+    
+    // Check if the device has each property before attempting to use toLowerCase()
+    const nameMatch = device.name ? device.name.toLowerCase().includes(filterText.toLowerCase()) : false;
+    const serialMatch = device.deviceSerial ? device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) : false;
+    const locationMatch = device.location ? device.location.toLowerCase().includes(filterText.toLowerCase()) : false;
+    
+    return nameMatch || serialMatch || locationMatch;
+  });
   return (
     <div className="space-y-6">
       {/* Header */}

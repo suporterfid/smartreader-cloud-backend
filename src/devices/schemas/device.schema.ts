@@ -29,6 +29,22 @@ export class Device {
 
   @Prop({
     type: {
+      type: { type: String, default: 'INVENTORY' },
+      antennas: { type: [Number], default: [] },
+      antennaZone: { type: String, default: 'CABINET' },
+      transmitPower: { type: Number, default: 17.25 },
+    },
+    default: () => ({
+      type: 'INVENTORY',
+      antennas: [1, 2],
+      antennaZone: 'CABINET',
+      transmitPower: 17.25
+    })
+  })
+  modeConfig: Record<string, any>;
+
+  @Prop({
+    type: {
       wifiSSID: { type: String, default: null },
       wifiPassword: { type: String, default: null },
       ethernetIP: { type: String, default: null },
