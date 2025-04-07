@@ -5,7 +5,7 @@ function Devices() {
   const [devices, setDevices] = useState([]);
   const [newDevice, setNewDevice] = useState({ 
     name: '', 
-    serial: '', 
+    deviceSerial: '', 
     location: '', 
     status: '',
     type: 'reader', 
@@ -41,7 +41,7 @@ function Devices() {
       setDevices([...devices, response]);
       setNewDevice({ 
         name: '', 
-        serial: '', 
+        deviceSerial: '', 
         location: '', 
         status: '',
         type: 'reader', 
@@ -147,7 +147,7 @@ function Devices() {
 
   const filteredDevices = devices.filter(device => 
     device.name.toLowerCase().includes(filterText.toLowerCase()) ||
-    device.serial.toLowerCase().includes(filterText.toLowerCase()) ||
+    device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) ||
     device.location.toLowerCase().includes(filterText.toLowerCase())
   );
 
@@ -234,7 +234,7 @@ function Devices() {
                 id="serial"
                 className="input-field mt-1"
                 placeholder="Enter serial number"
-                value={newDevice.serial}
+                value={newDevice.deviceSerial}
                 onChange={(e) => setNewDevice({ ...newDevice, serial: e.target.value })}
                 required
               />
@@ -349,19 +349,19 @@ function Devices() {
       {/* Devices Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredDevices.map((device) => (
-          <div key={device.id} className={`card ${selectedDevices.includes(device.serial) ? 'ring-2 ring-blue-500' : ''}`}>
+          <div key={device.id} className={`card ${selectedDevices.includes(device.deviceSerial) ? 'ring-2 ring-blue-500' : ''}`}>
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    checked={selectedDevices.includes(device.serial)}
-                    onChange={() => handleDeviceSelection(device.serial)}
+                    checked={selectedDevices.includes(device.deviceSerial)}
+                    onChange={() => handleDeviceSelection(device.deviceSerial)}
                     className="h-4 w-4 text-blue-600 rounded border-gray-300"
                   />
                   <h3 className="text-lg font-medium text-gray-900">{device.name}</h3>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">Serial: {device.serial}</p>
+                <p className="mt-1 text-sm text-gray-500">Serial: {device.deviceSerial}</p>
               </div>
               <span className={`status-badge ${
                 device.status === 'online' ? 'status-badge-online' :
@@ -385,25 +385,25 @@ function Devices() {
               </button>
               <div className="space-x-3">
                 <button
-                  onClick={() => sendStartCommand(device.serial, device.modeConfig)}
+                  onClick={() => sendStartCommand(device.deviceSerial, device.modeConfig)}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
                   Start
                 </button>
                 <button
-                  onClick={() => sendStopCommand(device.serial)}
+                  onClick={() => sendStopCommand(device.deviceSerial)}
                   className="text-red-600 hover:text-red-800 text-sm font-medium"
                 >
                   Stop
                 </button>
                 <button
-                  onClick={() => sendModeCommand(device.serial, device.modeConfig)}
+                  onClick={() => sendModeCommand(device.deviceSerial, device.modeConfig)}
                   className="text-green-600 hover:text-green-800 text-sm font-medium"
                 >
                   Update Mode
                 </button>
                 <button
-                  onClick={() => sendRebootCommand(device.serial)}
+                  onClick={() => sendRebootCommand(device.deviceSerial)}
                   className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
                 >
                   Reboot
