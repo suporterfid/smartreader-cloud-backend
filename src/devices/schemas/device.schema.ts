@@ -27,21 +27,8 @@ export class Device {
   @Prop({ default: null })
   firmwareVersion?: string;
 
-  @Prop({
-    type: {
-      type: { type: String, default: 'INVENTORY' },
-      antennas: { type: [Number], default: [] },
-      antennaZone: { type: String, default: 'CABINET' },
-      transmitPower: { type: Number, default: 17.25 },
-    },
-    default: () => ({
-      type: 'INVENTORY',
-      antennas: [1, 2],
-      antennaZone: 'CABINET',
-      transmitPower: 17.25
-    })
-  })
-  modeConfig: Record<string, any>;
+  @Prop({ type: Object, required: true })
+  modeConfig: any;
 
   @Prop({
     type: {
