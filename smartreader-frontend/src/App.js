@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import Home from './components/Home';
 import Devices from './components/Devices';
@@ -17,7 +17,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'API-Key': 'EXAMPLE_API_KEY'//process.env.REACT_APP_API_KEY,
+          'x-api-key': 'EXAMPLE_API_KEY'//process.env.REACT_APP_API_KEY,
         },
         body: JSON.stringify({ username, password }),
       });
@@ -87,17 +87,16 @@ function App() {
     );
   }
 
+  // Return this without the Router component
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/devices" element={<Devices />} />
-          <Route path="/metrics" element={<Metrics />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/devices" element={<Devices />} />
+        <Route path="/metrics" element={<Metrics />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
   );
 }
 
