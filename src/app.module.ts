@@ -27,7 +27,8 @@ import { AuthModule } from './auth/auth.module';
     EventEmitterModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(), // Habilita o agendamento
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/smartreader', {
+    //MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://192.168.68.118:27017/smartreader', {
+    MongooseModule.forRoot('mongodb://192.168.68.118:27017/smartreader', {
         retryWrites: true,
         w: 'majority',
         serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds

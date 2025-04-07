@@ -9,7 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 export class MqttService implements OnModuleInit {
   private client: MqttClient;
   private readonly logger = new Logger(MqttService.name);
-  private readonly brokerUrl = process.env.MQTT_URL || 'mqtt://localhost:1883';
+  //private readonly brokerUrl = process.env.MQTT_URL || 'mqtt://localhost:1883';
+  private readonly brokerUrl = 'mqtt://localhost:1883';
   private readonly eventBuffer: any[] = [];
   private readonly BATCH_SIZE = 10;
   private readonly BATCH_INTERVAL_MS = 5000;

@@ -17,13 +17,14 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
-    "tailwindcss": "^3.3.0",
-    "postcss": "^8.4.31",
+    "@heroicons/react": "^2.0.18",
     "autoprefixer": "^10.4.16",
-    "@heroicons/react": "^2.0.18"
+    "cross-env": "^7.0.3",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env PORT=3002 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

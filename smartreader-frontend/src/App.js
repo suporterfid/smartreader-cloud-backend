@@ -17,7 +17,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'API-Key': process.env.REACT_APP_API_KEY,
+          'API-Key': 'EXAMPLE_API_KEY'//process.env.REACT_APP_API_KEY,
         },
         body: JSON.stringify({ username, password }),
       });
