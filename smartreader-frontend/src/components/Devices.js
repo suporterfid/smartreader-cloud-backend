@@ -765,3 +765,6 @@ function Devices() {
       </div>
     </div>
   );
+}
+
+export default Devices;
