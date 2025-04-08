@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
+import { Bar, Line, Pie } from 'react-chartjs-2';
 import axios from 'axios';
+import { deviceService } from '../services/api';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -8,6 +9,7 @@ import {
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -20,6 +22,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -28,6 +31,13 @@ ChartJS.register(
 function Metrics() {
   const [metrics, setMetrics] = useState([]);
   const [timeRange, setTimeRange] = useState('24h');
+  const [deviceStats, setDeviceStats] = useState({
+    total: 0,
+    online: 0,
+    offline: 0,
+    unknown: 0
+  });
+  const [offlineDevices, setOfflineDevices] = useState([]);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -38,8 +48,38 @@ function Metrics() {
         console.error('Error fetching metrics:', error);
       }
     };
+    
+    const fetchDeviceStats = async () => {
+      try {
+        const devices = await deviceService.getDevices();
+        
+        const stats = {
+          total: devices.length,
+          online: devices.filter(d => d.communicationStatus === 'online').length,
+          offline: devices.filter(d => d.communicationStatus === 'offline').length,
+          unknown: devices.filter(d => !d.communicationStatus || d.communicationStatus === 'unknown').length
+        };
+        
+        setDeviceStats(stats);
+        
+        // Get list of offline devices
+        const offline = devices.filter(d => d.communicationStatus === 'offline');
+        setOfflineDevices(offline);
+      } catch (error) {
+        console.error('Error fetching device stats:', error);
+      }
+    };
 
     fetchMetrics();
+    fetchDeviceStats();
+    
+    // Refresh data every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchMetrics();
+      fetchDeviceStats();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
   }, [timeRange]);
 
   const summaryStats = [
@@ -71,6 +111,29 @@ function Metrics() {
       },
     },
   };
+  
+  const pieChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+      },
+    },
+  };
+  
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const secondsAgo = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (secondsAgo < 60) return `${secondsAgo} seconds ago`;
+    if (secondsAgo < 3600) return `${Math.floor(secondsAgo / 60)} minutes ago`;
+    if (secondsAgo < 86400) return `${Math.floor(secondsAgo / 3600)} hours ago`;
+    return `${Math.floor(secondsAgo / 86400)} days ago`;
+  };
 
   return (
     <div className="space-y-6">
@@ -95,6 +158,126 @@ function Metrics() {
           </select>
         </div>
       </div>
+
+      {/* Device Communication Status Chart */}
+      <div className="card">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Device Communication Status</h3>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="h-64">
+            <Pie
+              data={{
+                labels: ['Online', 'Offline', 'Unknown'],
+                datasets: [
+                  {
+                    label: 'Devices',
+                    data: [deviceStats.online, deviceStats.offline, deviceStats.unknown],
+                    backgroundColor: [
+                      'rgba(52, 211, 153, 0.8)',  // Green for online
+                      'rgba(239, 68, 68, 0.8)',   // Red for offline
+                      'rgba(156, 163, 175, 0.8)', // Gray for unknown
+                    ],
+                    borderColor: [
+                      'rgb(52, 211, 153)',
+                      'rgb(239, 68, 68)',
+                      'rgb(156, 163, 175)',
+                    ],
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={pieChartOptions}
+            />
+          </div>
+          <div>
+            <h4 className="font-medium text-gray-700 mb-2">Communication Status Summary</h4>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Online Devices</span>
+                  <span className="font-medium text-gray-900">{deviceStats.online}</span>
+                </div>
+                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full" 
+                    style={{ width: `${deviceStats.total ? (deviceStats.online / deviceStats.total) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Offline Devices</span>
+                  <span className="font-medium text-gray-900">{deviceStats.offline}</span>
+                </div>
+                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-red-500 h-2 rounded-full" 
+                    style={{ width: `${deviceStats.total ? (deviceStats.offline / deviceStats.total) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Unknown Status</span>
+                  <span className="font-medium text-gray-900">{deviceStats.unknown}</span>
+                </div>
+                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gray-500 h-2 rounded-full" 
+                    style={{ width: `${deviceStats.total ? (deviceStats.unknown / deviceStats.total) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Offline Devices List */}
+      {offlineDevices.length > 0 && (
+        <div className="card">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Offline Devices</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Device Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Serial
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Seen
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Timeout
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {offlineDevices.map((device) => (
+                  <tr key={device._id || device.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {device.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {device.deviceSerial}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatTimeAgo(device.lastSeen)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {device.communicationTimeout || 300} seconds
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

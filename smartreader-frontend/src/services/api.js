@@ -1,3 +1,4 @@
+// smartreader-frontend/src/services/api.js
 import axios from 'axios';
 
 const API_KEY = 'EXAMPLE_API_KEY'; //process.env.REACT_APP_API_KEY || 'EXAMPLE_API_KEY';
@@ -17,6 +18,11 @@ export const deviceService = {
     return response.data;
   },
 
+  getDevicesByStatus: async (status) => {
+    const response = await api.get(`/devices/status${status ? `?status=${status}` : ''}`);
+    return response.data;
+  },
+
   getDeviceById: async (id) => {
     const response = await api.get(`/devices/${id}`);
     return response.data;
@@ -29,6 +35,11 @@ export const deviceService = {
 
   put: async (endpoint, data) => {
     const response = await api.put(endpoint, data);
+    return response;
+  },
+
+  patch: async (endpoint, data) => {
+    const response = await api.patch(endpoint, data);
     return response;
   },
 
@@ -73,6 +84,13 @@ export const deviceService = {
     });
     return response.data;
   },
+
+  updateCommunicationTimeout: async (deviceSerial, timeout) => {
+    const response = await api.patch(`/devices/${deviceSerial}/timeout`, {
+      timeout
+    });
+    return response.data;
+  }
 };
 
 export default api;

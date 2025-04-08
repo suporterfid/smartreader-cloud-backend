@@ -1,17 +1,71 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { deviceService } from '../services/api';
 
 function Home() {
-  const stats = [
-    { name: 'Total Devices', value: '12', change: '+2', changeType: 'increase' },
-    { name: 'Active Devices', value: '8', change: '+1', changeType: 'increase' },
-    { name: 'Total Events', value: '1,429', change: '+123', changeType: 'increase' },
-    { name: 'System Uptime', value: '99.9%', change: '0.1%', changeType: 'decrease' },
-  ];
-
-  const recentEvents = [
+  const [deviceStats, setDeviceStats] = useState({
+    total: 0,
+    online: 0,
+    offline: 0,
+    unknown: 0
+  });
+  
+  const [recentEvents, setRecentEvents] = useState([
     { id: 1, device: 'Device A', event: 'Status Update', time: '5 min ago', status: 'success' },
     { id: 2, device: 'Device B', event: 'Configuration Change', time: '10 min ago', status: 'warning' },
     { id: 3, device: 'Device C', event: 'Error Detected', time: '15 min ago', status: 'error' },
+  ]);
+
+  useEffect(() => {
+    const fetchDeviceStats = async () => {
+      try {
+        const devices = await deviceService.getDevices();
+        
+        const stats = {
+          total: devices.length,
+          online: devices.filter(d => d.communicationStatus === 'online').length,
+          offline: devices.filter(d => d.communicationStatus === 'offline').length,
+          unknown: devices.filter(d => !d.communicationStatus || d.communicationStatus === 'unknown').length
+        };
+        
+        setDeviceStats(stats);
+      } catch (error) {
+        console.error('Error fetching device stats:', error);
+      }
+    };
+    
+    fetchDeviceStats();
+    
+    // Refresh stats every 30 seconds
+    const intervalId = setInterval(fetchDeviceStats, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const stats = [
+    { 
+      name: 'Total Devices', 
+      value: deviceStats.total.toString(), 
+      change: '+0', 
+      changeType: 'neutral' 
+    },
+    { 
+      name: 'Online Devices', 
+      value: deviceStats.online.toString(), 
+      change: '+0', 
+      changeType: 'increase' 
+    },
+    { 
+      name: 'Offline Devices', 
+      value: deviceStats.offline.toString(), 
+      change: '+0', 
+      changeType: 'decrease' 
+    },
+    { 
+      name: 'Status Unknown', 
+      value: deviceStats.unknown.toString(), 
+      change: '0', 
+      changeType: 'neutral' 
+    },
   ];
 
   return (
@@ -41,13 +95,64 @@ function Home() {
                 {stat.value}
               </div>
               <div className={`inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                stat.changeType === 'increase' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                stat.changeType === 'increase' ? 'bg-green-100 text-green-800' : 
+                stat.changeType === 'decrease' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
               }`}>
                 {stat.change}
               </div>
             </dd>
           </div>
         ))}
+      </div>
+
+      {/* Device Status Summary */}
+      <div className="card">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Device Status Summary</h2>
+        
+        <div className="relative">
+          <div className="overflow-hidden h-4 mb-4 text-xs flex rounded bg-gray-200">
+            {deviceStats.online > 0 && (
+              <div 
+                style={{ width: `${(deviceStats.online / deviceStats.total) * 100}%` }} 
+                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"
+              >
+                {deviceStats.online}
+              </div>
+            )}
+            {deviceStats.offline > 0 && (
+              <div 
+                style={{ width: `${(deviceStats.offline / deviceStats.total) * 100}%` }} 
+                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500"
+              >
+                {deviceStats.offline}
+              </div>
+            )}
+            {deviceStats.unknown > 0 && (
+              <div 
+                style={{ width: `${(deviceStats.unknown / deviceStats.total) * 100}%` }} 
+                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gray-500"
+              >
+                {deviceStats.unknown}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-between text-sm text-gray-600">
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
+            <span>Online: {deviceStats.online}</span>
+          </div>
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-red-500 mr-2"></div>
+            <span>Offline: {deviceStats.offline}</span>
+          </div>
+          <div className="flex items-center">
+            <div className="h-3 w-3 rounded-full bg-gray-500 mr-2"></div>
+            <span>Unknown: {deviceStats.unknown}</span>
+          </div>
+        </div>
       </div>
 
       {/* Recent Events */}
@@ -83,6 +188,33 @@ function Home() {
           <button className="btn-secondary w-full">
             View All Events
           </button>
+        </div>
+      </div>
+      
+      {/* Communication Status Information */}
+      <div className="card">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Communication Status Information</h2>
+        <div className="prose prose-sm text-gray-700">
+          <p>
+            Device communication status is determined based on the last communication time and the configured timeout for each device.
+          </p>
+          <ul className="mt-2 space-y-1">
+            <li className="flex items-center">
+              <div className="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
+              <span><strong>Online:</strong> Device has communicated within its timeout period</span>
+            </li>
+            <li className="flex items-center">
+              <div className="h-3 w-3 rounded-full bg-red-500 mr-2"></div>
+              <span><strong>Offline:</strong> Device hasn't communicated for longer than its timeout period</span>
+            </li>
+            <li className="flex items-center">
+              <div className="h-3 w-3 rounded-full bg-gray-500 mr-2"></div>
+              <span><strong>Unknown:</strong> Device has never communicated or status cannot be determined</span>
+            </li>
+          </ul>
+          <p className="mt-4">
+            Each device can have a custom communication timeout setting. The default timeout is 5 minutes (300 seconds).
+          </p>
         </div>
       </div>
     </div>

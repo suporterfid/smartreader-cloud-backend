@@ -26,6 +26,18 @@ export class Device {
 
   @Prop({ default: null })
   firmwareVersion?: string;
+  
+  // New property for communication timeout in seconds
+  @Prop({ default: 300 }) // Default 5 minutes (300 seconds)
+  communicationTimeout: number;
+  
+  // Computed field for communication status
+  @Prop({ 
+    type: String,
+    enum: ['online', 'offline', 'unknown'],
+    default: 'unknown'
+  })
+  communicationStatus: string;
 
   @Prop({ type: Object, required: true })
   modeConfig: any;
@@ -38,20 +50,45 @@ export class Device {
     },
     default: {},
   })
-
   networkSettings: Record<string, any>;
-    @Prop({
+  
+  @Prop({
     type: {
       powerState: { type: Boolean, default: true },
       brightness: { type: Number, min: 0, max: 100, default: 50 },
     },
     default: {},
   })
-  
   ledControl: Record<string, any>;
-    @Prop({ enum: ['normal', 'low-power', 'debug'], default: 'normal' })
-  operationalMode: string;
   
+  @Prop({ enum: ['normal', 'low-power', 'debug'], default: 'normal' })
+  operationalMode: string;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);
+
+// Add method to check if device is offline based on timeout
+DeviceSchema.methods.isOffline = function(): boolean {
+  if (!this.lastSeen) {
+    return true; // No communication recorded yet
+  }
+  
+  const now = new Date();
+  const lastSeen = new Date(this.lastSeen);
+  const diffSeconds = Math.floor((now.getTime() - lastSeen.getTime()) / 1000);
+  
+  return diffSeconds > this.communicationTimeout;
+};
+
+// Virtual property to get communication status
+DeviceSchema.virtual('status').get(function() {
+  if (!this.active) {
+    return 'disabled';
+  }
+  
+  if (this.isOffline()) {
+    return 'offline';
+  }
+  
+  return 'online';
+});

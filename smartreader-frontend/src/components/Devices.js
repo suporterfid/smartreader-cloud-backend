@@ -8,6 +8,7 @@ function Devices() {
     deviceSerial: '', 
     location: '', 
     status: '',
+    communicationTimeout: 300, // Default to 5 minutes (300 seconds)
     modeConfig: {
       type: 'INVENTORY',
       antennas: [1, 2],
@@ -18,12 +19,21 @@ function Devices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [filterText, setFilterText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [editingDevice, setEditingDevice] = useState(null);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [isTimeoutModalOpen, setIsTimeoutModalOpen] = useState(false);
+  const [timeoutDevice, setTimeoutDevice] = useState(null);
+  const [timeoutValue, setTimeoutValue] = useState(300);
 
   const fetchDevices = async () => {
     try {
-      const data = await deviceService.getDevices();
+      let data;
+      if (statusFilter) {
+        data = await deviceService.getDevicesByStatus(statusFilter);
+      } else {
+        data = await deviceService.getDevices();
+      }
       setDevices(data);
     } catch (error) {
       console.error('Error fetching devices:', error);
@@ -40,6 +50,7 @@ function Devices() {
         deviceSerial: '', 
         location: '', 
         status: '',
+        communicationTimeout: 300, // Default to 5 minutes (300 seconds)
         modeConfig: {
           type: 'INVENTORY',
           antennas: [1, 2],
@@ -106,6 +117,30 @@ function Devices() {
     });
   };
 
+  const openTimeoutModal = (device) => {
+    setTimeoutDevice(device);
+    setTimeoutValue(device.communicationTimeout || 300);
+    setIsTimeoutModalOpen(true);
+  };
+
+  const updateCommunicationTimeout = async () => {
+    if (!timeoutDevice) return;
+    
+    try {
+      await deviceService.updateCommunicationTimeout(timeoutDevice.deviceSerial, timeoutValue);
+      // Update the device in the local state
+      setDevices(devices.map(device => 
+        device.deviceSerial === timeoutDevice.deviceSerial 
+          ? { ...device, communicationTimeout: timeoutValue } 
+          : device
+      ));
+      setIsTimeoutModalOpen(false);
+      setTimeoutDevice(null);
+    } catch (error) {
+      console.error('Error updating communication timeout:', error);
+    }
+  };
+
   const sendStartCommand = async (deviceSerial, modeConfig) => {
     try {
       // First send mode command
@@ -166,17 +201,49 @@ function Devices() {
       console.error(`Error sending ${command} commands:`, error);
     }
   };
+  
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const secondsAgo = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (secondsAgo < 60) return `${secondsAgo} seconds ago`;
+    if (secondsAgo < 3600) return `${Math.floor(secondsAgo / 60)} minutes ago`;
+    if (secondsAgo < 86400) return `${Math.floor(secondsAgo / 3600)} hours ago`;
+    return `${Math.floor(secondsAgo / 86400)} days ago`;
+  };
+  
+  const getStatusClass = (device) => {
+    if (!device) return 'bg-gray-100 text-gray-800';
+    
+    if (!device.communicationStatus || device.communicationStatus === 'unknown') {
+      return 'bg-gray-100 text-gray-800';
+    }
+    
+    if (device.communicationStatus === 'offline') {
+      return 'bg-red-100 text-red-800';
+    }
+    
+    return 'bg-green-100 text-green-800';
+  };
 
   useEffect(() => {
     fetchDevices();
-  }, []);
+    
+    // Refresh the device list every 30 seconds to update status
+    const intervalId = setInterval(fetchDevices, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [statusFilter]);
 
   const filteredDevices = devices.filter(device => 
-    device.name.toLowerCase().includes(filterText.toLowerCase()) ||
-    device.deviceSerial.toLowerCase().includes(filterText.toLowerCase()) ||
-    device.location.toLowerCase().includes(filterText.toLowerCase())
+    device.name?.toLowerCase().includes(filterText.toLowerCase()) ||
+    device.deviceSerial?.toLowerCase().includes(filterText.toLowerCase()) ||
+    device.location?.toLowerCase().includes(filterText.toLowerCase())
   );
-
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -220,8 +287,8 @@ function Devices() {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1 w-full">
           <input
             type="text"
             placeholder="Filter devices..."
@@ -229,6 +296,18 @@ function Devices() {
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
           />
+        </div>
+        <div className="w-full sm:w-auto">
+          <select 
+            className="input-field w-full"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+            <option value="unknown">Unknown</option>
+          </select>
         </div>
       </div>
 
@@ -278,6 +357,27 @@ function Devices() {
                 onChange={(e) => setNewDevice({ ...newDevice, location: e.target.value })}
                 required
               />
+            </div>
+            <div>
+              <label htmlFor="communicationTimeout" className="block text-sm font-medium text-gray-700">
+                Communication Timeout (seconds)
+              </label>
+              <input
+                type="number"
+                id="communicationTimeout"
+                className="input-field mt-1"
+                placeholder="Enter timeout in seconds"
+                value={newDevice.communicationTimeout}
+                onChange={(e) => setNewDevice({ 
+                  ...newDevice, 
+                  communicationTimeout: parseInt(e.target.value) || 300
+                })}
+                min="1"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Time after which the device will be considered offline if no communication is received.
+              </p>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700">
@@ -421,6 +521,27 @@ function Devices() {
               />
             </div>
             <div>
+              <label htmlFor="edit-timeout" className="block text-sm font-medium text-gray-700">
+                Communication Timeout (seconds)
+              </label>
+              <input
+                type="number"
+                id="edit-timeout"
+                className="input-field mt-1"
+                placeholder="Enter timeout in seconds"
+                value={editingDevice.communicationTimeout || 300}
+                onChange={(e) => setEditingDevice({ 
+                  ...editingDevice, 
+                  communicationTimeout: parseInt(e.target.value) || 300
+                })}
+                min="1"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Time after which the device will be considered offline if no communication is received.
+              </p>
+            </div>
+            <div>
               <label htmlFor="edit-status" className="block text-sm font-medium text-gray-700">
                 Status
               </label>
@@ -516,10 +637,55 @@ function Devices() {
         </div>
       )}
 
+      {/* Communication Timeout Modal */}
+      {isTimeoutModalOpen && timeoutDevice && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Update Communication Timeout</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Set the time (in seconds) after which the device will be considered offline if no communication is received.
+            </p>
+            <div className="mb-4">
+              <label htmlFor="timeout-value" className="block text-sm font-medium text-gray-700 mb-1">
+                Timeout (seconds)
+              </label>
+              <input
+                type="number"
+                id="timeout-value"
+                className="input-field w-full"
+                value={timeoutValue}
+                onChange={(e) => setTimeoutValue(parseInt(e.target.value) || 300)}
+                min="1"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setIsTimeoutModalOpen(false);
+                  setTimeoutDevice(null);
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateCommunicationTimeout}
+                className="btn-primary"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Devices Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredDevices.map((device) => (
-          <div key={device.id} className={`card ${selectedDevices.includes(device.deviceSerial) ? 'ring-2 ring-blue-500' : ''}`}>
+          <div 
+            key={device._id || device.id} 
+            className={`card ${selectedDevices.includes(device.deviceSerial) ? 'ring-2 ring-blue-500' : ''}`}
+          >
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
@@ -533,17 +699,25 @@ function Devices() {
                 </div>
                 <p className="mt-1 text-sm text-gray-500">Serial: {device.deviceSerial}</p>
               </div>
-              <span className={`status-badge ${
-                device.status === 'online' ? 'status-badge-online' :
-                device.status === 'offline' ? 'status-badge-offline' :
-                'bg-yellow-100 text-yellow-800'
-              }`}>
-                {device.status}
+              <span className={`status-badge ${getStatusClass(device)}`}>
+                {device.communicationStatus || 'Unknown'}
               </span>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 space-y-2">
               <p className="text-sm text-gray-500">
                 <span className="font-medium">Location:</span> {device.location}
+              </p>
+              <p className="text-sm text-gray-500">
+                <span className="font-medium">Last Communication:</span> {formatTimeAgo(device.lastSeen)}
+              </p>
+              <p className="text-sm text-gray-500">
+                <span className="font-medium">Timeout:</span> {device.communicationTimeout || 300} seconds
+                <button 
+                  onClick={() => openTimeoutModal(device)}
+                  className="ml-2 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Edit
+                </button>
               </p>
             </div>
             <div className="mt-6 flex justify-between">
@@ -555,7 +729,7 @@ function Devices() {
               </button>
               <div className="space-x-3">
                 <button
-                  onClick={() => deleteDevice(device.id)}
+                  onClick={() => deleteDevice(device._id || device.id)}
                   className="text-red-600 hover:text-red-800 text-sm font-medium"
                 >
                   Delete
@@ -591,6 +765,3 @@ function Devices() {
       </div>
     </div>
   );
-}
-
-export default Devices;

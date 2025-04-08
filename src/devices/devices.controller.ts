@@ -1,8 +1,8 @@
-// src\devices\devices.controller.ts
-import { Controller, Patch, Post, Get, Put, Delete, Param, Body, Logger } from '@nestjs/common';
+// src/devices/devices.controller.ts
+import { Controller, Patch, Post, Get, Put, Delete, Param, Body, Logger, Query } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { MqttService } from '../mqtt/mqtt.service';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Devices')
 @ApiSecurity('x-api-key')
@@ -48,8 +48,21 @@ export class DevicesController {
     this.logger.log(`Retrieved ${devices.length} device(s)`);
     return devices;
   }
-
   
+  @Get('status')
+  @ApiOperation({ summary: 'Get devices with their communication status' })
+  @ApiQuery({ name: 'status', required: false, enum: ['online', 'offline', 'unknown'], description: 'Filter by communication status' })
+  async getDevicesByStatus(@Query('status') status?: string) {
+    this.logger.log(`Fetching devices with status filter: ${status || 'all'}`);
+    const devices = await this.devicesService.getAllDevices();
+    
+    if (status) {
+      return devices.filter(device => device.communicationStatus === status);
+    }
+    
+    return devices;
+  }
+
   @Put(':deviceId')
   @ApiOperation({ summary: 'Update device information' })
   async updateDevice(@Param('deviceId') deviceId: string, @Body() updateData: any) {
@@ -79,8 +92,28 @@ export class DevicesController {
   @Patch(':deviceSerial/configuration')
   async updateDeviceConfiguration(
     @Param('deviceSerial') deviceSerial: string,
-    @Body() configUpdate: Partial<{ networkSettings: any; ledControl: any; operationalMode: string }>
+    @Body() configUpdate: Partial<{ 
+      networkSettings: any; 
+      ledControl: any; 
+      operationalMode: string;
+      communicationTimeout?: number;
+    }>
   ) {
     return this.devicesService.updateDeviceConfiguration(deviceSerial, configUpdate);
+  }
+  
+  @Patch(':deviceSerial/timeout')
+  @ApiOperation({ summary: 'Update device communication timeout' })
+  async updateCommunicationTimeout(
+    @Param('deviceSerial') deviceSerial: string,
+    @Body('timeout') timeout: number,
+  ) {
+    if (!timeout || timeout < 0) {
+      return { error: 'Invalid timeout value. Must be a positive number.' };
+    }
+    
+    return this.devicesService.updateDeviceConfiguration(deviceSerial, {
+      communicationTimeout: timeout
+    });
   }
 }

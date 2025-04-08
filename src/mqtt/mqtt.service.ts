@@ -1,8 +1,10 @@
+// src/mqtt/mqtt.service.ts (partial update)
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { connect, MqttClient } from 'mqtt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventsService } from '../events/events.service';
 import { CommandsService } from '../commands/commands.service';
+import { DevicesService } from '../devices/devices.service'; // Import DevicesService
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -29,6 +31,7 @@ export class MqttService implements OnModuleInit {
     private readonly eventEmitter: EventEmitter2,
     private readonly eventsService: EventsService,
     private readonly commandsService: CommandsService,
+    private readonly devicesService: DevicesService, // Inject DevicesService
   ) {
     setInterval(() => this.flushEventBuffer(), this.BATCH_INTERVAL_MS);
   }
@@ -60,6 +63,11 @@ export class MqttService implements OnModuleInit {
         const payload = JSON.parse(msg);
         const parts = topic.split('/');
         const deviceSerial = parts[1];
+
+        // Update the lastSeen timestamp for the device
+        if (deviceSerial) {
+          await this.devicesService.updateLastSeen(deviceSerial);
+        }
         
         if (topic.includes('events')) {
           payload.deviceSerial = deviceSerial;
