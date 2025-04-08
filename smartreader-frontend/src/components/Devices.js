@@ -65,6 +65,7 @@ function Devices() {
   const handleEditDevice = (device) => {
     setEditingDevice({
       ...device,
+      id: device._id, // Ensure the id is properly set from _id
       modeConfig: {
         ...device.modeConfig,
         antennas: Array.isArray(device.modeConfig.antennas) 
@@ -78,9 +79,16 @@ function Devices() {
   const updateDevice = async (e) => {
     e.preventDefault();
     try {
-      const response = await deviceService.put(`/devices/${editingDevice.id}`, editingDevice);
+      // Use the _id if it exists, otherwise fall back to id
+      const deviceId = editingDevice._id || editingDevice.id;
+      if (!deviceId) {
+        console.error('No device ID found for update');
+        return;
+      }
+      
+      const response = await deviceService.put(`/devices/${deviceId}`, editingDevice);
       setDevices(devices.map(device => 
-        device.id === editingDevice.id ? response.data : device
+        device._id === deviceId ? response.data : device
       ));
       setIsEditFormOpen(false);
       setEditingDevice(null);
