@@ -2,7 +2,25 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type DeviceDocument = Device & Document;
+// Create an interface that extends Document and includes our custom methods
+export interface DeviceDocument extends Document {
+  name: string;
+  type: string;
+  deviceSerial: string;
+  location: string;
+  active: boolean;
+  lastSeen?: Date;
+  firmwareVersion?: string;
+  communicationTimeout: number;
+  communicationStatus: string;
+  modeConfig: any;
+  networkSettings: Record<string, any>;
+  ledControl: Record<string, any>;
+  operationalMode: string;
+
+  // Define the custom method
+  isOffline(): boolean;
+}
 
 @Schema({ timestamps: true, collection: 'devices' })
 export class Device {
@@ -80,15 +98,20 @@ DeviceSchema.methods.isOffline = function(): boolean {
   return diffSeconds > this.communicationTimeout;
 };
 
-// Virtual property to get communication status
+// Virtual property for status - using a getter function
 DeviceSchema.virtual('status').get(function() {
   if (!this.active) {
     return 'disabled';
   }
   
-  if (this.isOffline()) {
+  // Instead of calling isOffline() directly, we'll check the status based on the same logic
+  if (!this.lastSeen) {
     return 'offline';
   }
   
-  return 'online';
+  const now = new Date();
+  const lastSeen = new Date(this.lastSeen);
+  const diffSeconds = Math.floor((now.getTime() - lastSeen.getTime()) / 1000);
+  
+  return diffSeconds > this.communicationTimeout ? 'offline' : 'online';
 });
