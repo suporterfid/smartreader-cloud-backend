@@ -1,6 +1,6 @@
 // src/devices/schemas/device.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 
 // Define the filter structure
 export class TagFilter {
@@ -47,6 +47,9 @@ export interface DeviceDocument extends Document {
   active: boolean;
   lastSeen?: Date;
   firmwareVersion?: string;
+  assignedFirmware?: MongooseSchema.Types.ObjectId;
+  firmwareUpdateStatus?: string;
+  firmwareUpdateDate?: Date;
   communicationTimeout: number;
   communicationStatus: string;
   modeConfig: ModeConfig;
@@ -80,6 +83,19 @@ export class Device {
 
   @Prop({ default: null })
   firmwareVersion?: string;
+  
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Firmware' })
+  assignedFirmware?: MongooseSchema.Types.ObjectId;
+  
+  @Prop({ 
+    type: String, 
+    enum: ['idle', 'downloading', 'installing', 'error', 'completed'],
+    default: 'idle'
+  })
+  firmwareUpdateStatus?: string;
+  
+  @Prop()
+  firmwareUpdateDate?: Date;
   
   // New property for communication timeout in seconds
   @Prop({ default: 300 }) // Default 5 minutes (300 seconds)

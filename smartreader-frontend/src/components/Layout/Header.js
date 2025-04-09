@@ -22,6 +22,9 @@ function Header() {
             <Link to="/metrics" className="text-secondary-600 hover:text-secondary-900 px-3 py-2 rounded-md text-sm font-medium">
               Metrics
             </Link>
+            <Link to="/firmwares" className="text-secondary-600 hover:text-secondary-900 px-3 py-2 rounded-md text-sm font-medium">
+              Firmware
+            </Link>
           </nav>
 
           <div className="flex items-center">
