@@ -65,14 +65,59 @@ export const deviceService = {
   },
 
   sendModeCommand: async (deviceSerial, modeConfig) => {
+    // Ensure all required properties are included
+    const fullModeConfig = {
+      type: 'INVENTORY',
+      antennas: [1, 2],
+      antennaZone: 'CABINET',
+      antennaZoneState: 'enabled',
+      transmitPower: 17.25,
+      groupIntervalInMs: 500,
+      rfMode: 'MaxThroughput',
+      searchMode: 'single-target',
+      session: '1',
+      tagPopulation: 32,
+      filter: {
+        value: '',
+        match: 'prefix',
+        operation: 'include',
+        status: 'disabled'
+      },
+      filterIncludeEpcHeaderList: {
+        value: '',
+        status: 'disabled'
+      },
+      rssiFilter: {
+        threshold: -72
+      },
+      ...modeConfig
+    };
+
+    // Ensure nested objects are properly merged
+    if (modeConfig.filter) {
+      fullModeConfig.filter = {
+        ...fullModeConfig.filter,
+        ...modeConfig.filter
+      };
+    }
+
+    if (modeConfig.filterIncludeEpcHeaderList) {
+      fullModeConfig.filterIncludeEpcHeaderList = {
+        ...fullModeConfig.filterIncludeEpcHeaderList,
+        ...modeConfig.filterIncludeEpcHeaderList
+      };
+    }
+
+    if (modeConfig.rssiFilter) {
+      fullModeConfig.rssiFilter = {
+        ...fullModeConfig.rssiFilter,
+        ...modeConfig.rssiFilter
+      };
+    }
+
     const response = await api.post(`/devices/${deviceSerial}/control`, {
       command: 'mode',
-      payload: {
-        type: modeConfig.type,
-        antennas: modeConfig.antennas,
-        antennaZone: modeConfig.antennaZone,
-        transmitPower: modeConfig.transmitPower
-      }
+      payload: fullModeConfig
     });
     return response.data;
   },

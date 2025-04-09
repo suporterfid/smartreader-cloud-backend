@@ -161,11 +161,28 @@ export class MqttService implements OnModuleInit {
   }
 
   private publishCommand(deviceSerial: string, command: any, type: 'control' | 'management', topicTemplate: string): void {
-    if (!command.commandId) command.commandId = uuidv4();
+    if (!command.command_id && !command.commandId) {
+      command.command_id = uuidv4();
+    } else if (command.commandId && !command.command_id) {
+      command.command_id = command.commandId;
+    }
+    
     command.deviceSerial = deviceSerial;
 
+    // Ensure the structure follows the expected format for the device
+    if (command.command === 'mode' && command.payload) {
+      // Ensure all required fields are included even if not specified by the user
+      const modePayload = command.payload;
+      
+      // Set default values if not provided
+      if (!modePayload.type) modePayload.type = 'INVENTORY';
+      if (!modePayload.antennas) modePayload.antennas = [1, 2];
+      if (!modePayload.antennaZone) modePayload.antennaZone = 'CABINET';
+      if (!modePayload.transmitPower && modePayload.transmitPower !== 0) modePayload.transmitPower = 17.25;
+    }
+
     this.commandsService.createCommand({
-      command_id: command.commandId,
+      command_id: command.command_id,
       type,
       deviceSerial,
       payload: command,
@@ -178,20 +195,20 @@ export class MqttService implements OnModuleInit {
     this.client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
       if (err) {
         this.logger.error(`Error publishing ${type} command`, err);
-        this.commandsService.updateCommand(command.commandId, { status: 'error' })
+        this.commandsService.updateCommand(command.command_id, { status: 'error' })
           .catch((e) => this.logger.error('Error updating command status', e));
       } else {
         this.logger.log(`${type.charAt(0).toUpperCase() + type.slice(1)} command published to "${topic}": ${payload}`);
 
         // Set timeout to mark command as "timed-out" if no response is received
         const timeout = setTimeout(async () => {
-          this.logger.warn(`Command ${command.commandId} has timed out.`);
-          await this.commandsService.updateCommand(command.commandId, { status: 'timed-out' });
-          await this.commandsService.updateCommandStatus(command.commandId, 'timed-out');
-          this.pendingCommands.delete(command.commandId);
+          this.logger.warn(`Command ${command.command_id} has timed out.`);
+          await this.commandsService.updateCommand(command.command_id, { status: 'timed-out' });
+          await this.commandsService.updateCommandStatus(command.command_id, 'timed-out');
+          this.pendingCommands.delete(command.command_id);
         }, this.COMMAND_TIMEOUT_MS);
 
-        this.pendingCommands.set(command.commandId, timeout);
+        this.pendingCommands.set(command.command_id, timeout);
       }
     });
   }

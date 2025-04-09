@@ -2,6 +2,42 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
+// Define the filter structure
+export class TagFilter {
+  value: string;
+  match: string;
+  operation: string;
+  status: string;
+}
+
+// Define the rssiFilter structure
+export class RssiFilter {
+  threshold: number;
+}
+
+// Define the filterIncludeEpcHeaderList structure
+export class FilterIncludeEpcHeaderList {
+  value: string;
+  status: string;
+}
+
+// Define the modeConfig structure
+export class ModeConfig {
+  type: string;
+  antennas: number[];
+  antennaZone: string;
+  antennaZoneState?: string;
+  transmitPower: number;
+  groupIntervalInMs?: number;
+  rfMode?: string;
+  searchMode?: string;
+  session?: string;
+  tagPopulation?: number;
+  filter?: TagFilter;
+  filterIncludeEpcHeaderList?: FilterIncludeEpcHeaderList;
+  rssiFilter?: RssiFilter;
+}
+
 // Create an interface that extends Document and includes our custom methods
 export interface DeviceDocument extends Document {
   name: string;
@@ -13,7 +49,7 @@ export interface DeviceDocument extends Document {
   firmwareVersion?: string;
   communicationTimeout: number;
   communicationStatus: string;
-  modeConfig: any;
+  modeConfig: ModeConfig;
   networkSettings: Record<string, any>;
   ledControl: Record<string, any>;
   operationalMode: string;
@@ -57,8 +93,17 @@ export class Device {
   })
   communicationStatus: string;
 
-  @Prop({ type: Object, required: true })
-  modeConfig: any;
+  @Prop({ 
+    type: Object, 
+    required: true,
+    default: {
+      type: "INVENTORY",
+      antennas: [1, 2],
+      antennaZone: "CABINET",
+      transmitPower: 17.25
+    }
+  })
+  modeConfig: ModeConfig;
 
   @Prop({
     type: {
