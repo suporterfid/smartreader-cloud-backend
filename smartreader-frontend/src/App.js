@@ -3,6 +3,7 @@ import { Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import Home from './components/Home';
 import Devices from './components/Devices';
+import DeviceGroups from './components/DeviceGroups';
 import Firmwares from './components/Firmwares';
 import Metrics from './components/Metrics';
 
@@ -94,6 +95,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/devices" element={<Devices />} />
+        <Route path="/device-groups" element={<DeviceGroups />} />
         <Route path="/metrics" element={<Metrics />} />
         <Route path="/firmwares" element={<Firmwares />} />
         <Route path="*" element={<Navigate to="/" replace />} />

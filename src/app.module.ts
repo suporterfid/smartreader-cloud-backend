@@ -21,7 +21,10 @@ import { AuthMiddleware } from './auth/middleware/auth.middleware';
 import { DeviceLogsModule } from './device-logs/device-logs.module';
 import { ApiKeysService } from './api-keys/api-keys.service';
 import { AuthModule } from './auth/auth.module';
-
+import { FirmwaresModule } from './firmwares/firmware.module';
+import { DeviceGroupsModule } from './device-groups/device-groups.module';
+import { Device, DeviceSchema } from './devices/schemas/device.schema';
+import { Command, CommandSchema } from './commands/schemas/command.schema';
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
@@ -53,7 +56,9 @@ import { AuthModule } from './auth/auth.module';
     DevicesModule,
     WebhooksModule,
     DeviceLogsModule,
-    AuthModule
+    AuthModule,
+    FirmwaresModule,
+    DeviceGroupsModule
   ],
   providers: [
     {

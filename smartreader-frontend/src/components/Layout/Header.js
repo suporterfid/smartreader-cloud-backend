@@ -19,6 +19,9 @@ function Header() {
             <Link to="/devices" className="text-secondary-600 hover:text-secondary-900 px-3 py-2 rounded-md text-sm font-medium">
               Devices
             </Link>
+            <Link to="/device-groups" className="text-secondary-600 hover:text-secondary-900 px-3 py-2 rounded-md text-sm font-medium">
+              Device Groups
+            </Link>
             <Link to="/metrics" className="text-secondary-600 hover:text-secondary-900 px-3 py-2 rounded-md text-sm font-medium">
               Metrics
             </Link>
