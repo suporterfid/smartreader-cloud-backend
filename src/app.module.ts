@@ -1,4 +1,4 @@
-// src/app.module.ts
+// src/app.module.ts (Updated with Provisioning and Certificates)
 import { Module, MiddlewareConsumer, NestModule, OnModuleInit  } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -25,6 +25,10 @@ import { FirmwaresModule } from './firmwares/firmware.module';
 import { DeviceGroupsModule } from './device-groups/device-groups.module';
 import { Device, DeviceSchema } from './devices/schemas/device.schema';
 import { Command, CommandSchema } from './commands/schemas/command.schema';
+// New Modules for Device Provisioning
+import { ProvisioningModule } from './provisioning/provisioning.module';
+import { CertificatesModule } from './certificates/certificates.module';
+
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
@@ -58,7 +62,10 @@ import { Command, CommandSchema } from './commands/schemas/command.schema';
     DeviceLogsModule,
     AuthModule,
     FirmwaresModule,
-    DeviceGroupsModule
+    DeviceGroupsModule,
+    // Add the new modules
+    ProvisioningModule,
+    CertificatesModule
   ],
   providers: [
     {

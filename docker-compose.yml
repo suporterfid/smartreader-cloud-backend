@@ -14,10 +14,13 @@ services:
   #     - TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
   #     - TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
   #     - TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
+  #     - CA_PATH=/certs/ca
+  #     - DEVICE_CERT_PATH=/certs/devices
   #   networks:
   #     - internal_network
   #   volumes:
-  #     - ./:/app         # Mount current directory inside the container
+  #     - ./:/app                  # Mount current directory inside the container
+  #     - certs-volume:/certs      # Mount the certificate volume
   #   depends_on:
   #     - mongo
   #     - mosquitto
@@ -44,9 +47,39 @@ services:
     image: eclipse-mosquitto:1.6.15
     restart: always
     ports:
-      - "1883:1883"
+      - "1883:1883"  # Default MQTT port
+      - "8883:8883"  # TLS/SSL MQTT port
     networks:
       - internal_network
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+      - mosquitto-config:/mosquitto/config 
+      - certs-volume:/mosquitto/certs:ro  # Mount certificates volume for TLS
+    command: >
+      sh -c "
+        echo 'listener 1883' > /mosquitto/config/mosquitto.conf &&
+        echo 'allow_anonymous true' >> /mosquitto/config/mosquitto.conf &&
+        echo 'listener 8883' >> /mosquitto/config/mosquitto.conf &&
+        echo 'cafile /mosquitto/certs/ca/ca.crt' >> /mosquitto/config/mosquitto.conf &&
+        echo 'certfile /mosquitto/certs/server/server.crt' >> /mosquitto/config/mosquitto.conf &&
+        echo 'keyfile /mosquitto/certs/server/server.key' >> /mosquitto/config/mosquitto.conf &&
+        echo 'require_certificate true' >> /mosquitto/config/mosquitto.conf &&
+        echo 'use_identity_as_username true' >> /mosquitto/config/mosquitto.conf &&
+        mkdir -p /mosquitto/certs/server &&
+        if [ ! -f /mosquitto/certs/server/server.key ]; then
+          openssl genrsa -out /mosquitto/certs/server/server.key 2048;
+        fi &&
+        if [ ! -f /mosquitto/certs/ca/ca.crt ] || [ ! -f /mosquitto/certs/server/server.crt ]; then
+          mkdir -p /mosquitto/certs/ca;
+          openssl genrsa -out /mosquitto/certs/ca/ca.key 4096;
+          openssl req -x509 -new -nodes -key /mosquitto/certs/ca/ca.key -sha256 -days 3650 -out /mosquitto/certs/ca/ca.crt -subj '/CN=SmartReaderCA/O=SmartReader/C=US';
+          openssl req -new -key /mosquitto/certs/server/server.key -out /mosquitto/certs/server/server.csr -subj '/CN=mosquitto/O=SmartReader Server/C=US';
+          openssl x509 -req -in /mosquitto/certs/server/server.csr -CA /mosquitto/certs/ca/ca.crt -CAkey /mosquitto/certs/ca/ca.key -CAcreateserial -out /mosquitto/certs/server/server.crt -days 3650 -sha256;
+        fi &&
+        chown -R mosquitto:mosquitto /mosquitto &&
+        exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+      "
 
   prometheus:
     image: prom/prometheus:latest
@@ -83,3 +116,7 @@ networks:
 
 volumes:
   mongo-data:
+  mosquitto-data:
+  mosquitto-log:
+  mosquitto-config:
+  certs-volume:  # Shared volume for certificates

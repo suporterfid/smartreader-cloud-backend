@@ -1,4 +1,4 @@
-// src/devices/schemas/device.schema.ts
+// src/devices/schemas/device.schema.ts (Updated)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
@@ -38,6 +38,14 @@ export class ModeConfig {
   rssiFilter?: RssiFilter;
 }
 
+// Added new enum for provisioning status
+export enum ProvisioningStatus {
+  UNCLAIMED = 'unclaimed',
+  CLAIMED = 'claimed',
+  PROVISIONED = 'provisioned',
+  REVOKED = 'revoked'
+}
+
 // Create an interface that extends Document and includes our custom methods
 export interface DeviceDocument extends Document {
   name: string;
@@ -56,7 +64,15 @@ export interface DeviceDocument extends Document {
   networkSettings: Record<string, any>;
   ledControl: Record<string, any>;
   operationalMode: string;
-
+  // New fields for provisioning
+  provisioningStatus: string;
+  ownerId?: MongooseSchema.Types.ObjectId; // Reference to user who claimed device
+  provisioningTemplateId?: MongooseSchema.Types.ObjectId; // Reference to provisioning template
+  certificateId?: string; // Reference to certificate
+  lastPhoneHome?: Date; // Last time device connected to "phone home" endpoint
+  claimToken?: string; // Token used for claiming
+  claimTokenExpiry?: Date; // Expiry time for claim token
+  
   // Define the custom method
   isOffline(): boolean;
 }
@@ -142,6 +158,32 @@ export class Device {
   
   @Prop({ enum: ['normal', 'low-power', 'debug'], default: 'normal' })
   operationalMode: string;
+  
+  // New properties for device provisioning
+  @Prop({ 
+    type: String, 
+    enum: Object.values(ProvisioningStatus), 
+    default: ProvisioningStatus.UNCLAIMED 
+  })
+  provisioningStatus: string;
+  
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  ownerId?: MongooseSchema.Types.ObjectId;
+  
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ProvisioningTemplate' })
+  provisioningTemplateId?: MongooseSchema.Types.ObjectId;
+  
+  @Prop()
+  certificateId?: string;
+  
+  @Prop()
+  lastPhoneHome?: Date;
+  
+  @Prop()
+  claimToken?: string;
+  
+  @Prop()
+  claimTokenExpiry?: Date;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);

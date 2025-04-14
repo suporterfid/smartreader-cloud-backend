@@ -6,6 +6,9 @@ import Devices from './components/Devices';
 import DeviceGroups from './components/DeviceGroups';
 import Firmwares from './components/Firmwares';
 import Metrics from './components/Metrics';
+// Import new components
+import DeviceOnboarding from './components/DeviceOnboarding';
+import ProvisioningTemplates from './components/ProvisioningTemplates';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -98,6 +101,9 @@ function App() {
         <Route path="/device-groups" element={<DeviceGroups />} />
         <Route path="/metrics" element={<Metrics />} />
         <Route path="/firmwares" element={<Firmwares />} />
+        {/* Add new routes */}
+        <Route path="/device-onboarding" element={<DeviceOnboarding />} />
+        <Route path="/provisioning-templates" element={<ProvisioningTemplates />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
