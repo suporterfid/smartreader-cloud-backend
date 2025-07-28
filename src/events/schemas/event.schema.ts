@@ -10,13 +10,7 @@ export class Event {
   deviceSerial: string;
   @Prop({ type: Date, required: true })
   timestamp: Date;
-  @Prop({
-    type: {
-      epc: { type: String },
-      antenna: { type: Number },
-      rssi: { type: Number },
-    },
-  })
+  @Prop({ type: Object })
   payload: Record<string, any>;
 }
 
