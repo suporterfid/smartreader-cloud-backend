@@ -145,6 +145,23 @@ export class MqttService implements OnModuleInit {
         payload: { ...payload, deviceSerial },
       };
       this.eventBuffer.push(event);
+    } else if (payload.eventType === 'gpi-status') {
+      const deviceSerial =
+        payload.deviceSerial || payload.readerName || payload.mac || 'unknown';
+      const event = {
+        eventType: 'gpi-status',
+        deviceSerial,
+        timestamp: payload.timestamp
+          ? new Date(Math.floor(payload.timestamp / 1000))
+          : new Date(),
+        payload: {
+          gpiConfigurations: payload.gpiConfigurations,
+          readerName: payload.readerName,
+          mac: payload.mac,
+          deviceSerial,
+        },
+      };
+      this.eventBuffer.push(event);
     } else if (Array.isArray(payload)) {
       payload.forEach((event: any) => this.eventBuffer.push(event));
     } else {
