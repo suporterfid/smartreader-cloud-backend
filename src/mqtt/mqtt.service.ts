@@ -89,11 +89,12 @@ export class MqttService implements OnModuleInit {
   private async handleEventPayload(payload: any) {
     this.logger.log(`Buffering event: ${JSON.stringify(payload)}`);
 
-    // New tag read event format
+    // New tag read and heartbeat event format
     if (payload.tag_reads && Array.isArray(payload.tag_reads)) {
       payload.tag_reads.forEach((tag: any) => {
+        const eventType = tag.isHeartBeat ? 'heartbeat' : 'tagRead';
         const event = {
-          eventType: 'tagRead',
+          eventType,
           deviceSerial: payload.deviceSerial || payload.readerName,
           timestamp: tag.firstSeenTimestamp
             ? new Date(Math.floor(tag.firstSeenTimestamp / 1000))
@@ -107,6 +108,8 @@ export class MqttService implements OnModuleInit {
             tagDataKey: tag.tagDataKey,
             tagDataKeyName: tag.tagDataKeyName,
             tagDataSerial: tag.tagDataSerial,
+            isHeartBeat: tag.isHeartBeat,
+            isInventoryStatus: tag.isInventoryStatus,
             deviceSerial: payload.deviceSerial || payload.readerName,
           },
         };

@@ -140,7 +140,7 @@ Configure your devices to communicate with the backend using the following MQTT 
 
 | Topic                                                    | Purpose                                       | Example Topic                                    |
 | -------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
-| `smartreader/{deviceSerial}/events`                      | Publish tag read, status, inventory status, and connection events to the backend          | `smartreader/ABC123/events`           |
+| `smartreader/{deviceSerial}/events`                      | Publish tag read, status, inventory status, heartbeat, and connection events to the backend          | `smartreader/ABC123/events`           |
 | `smartreader/{deviceSerial}/command/control`             | Receive control commands from the backend     | `smartreader/ABC123/command/control`             |
 | `smartreader/{deviceSerial}/command/control/response`    | Publish command responses back to the backend | `smartreader/ABC123/command/control/response`    |
 | `smartreader/{deviceSerial}/command/management`          | Receive management commands from the backend  | `smartreader/ABC123/command/management`          |
