@@ -1,31 +1,31 @@
 version: '3.8'
 services:
-  # app:
-  #   build: .
-  #   ports:
-  #     - "3000:3000"      # Application port
-  #     - "9229:9229"      # Debugging port
-  #   environment:
-  #     - MONGO_URI=mongodb://mongo:27017/smartreader
-  #     - MQTT_URL=mqtt://mosquitto:1883
-  #     - API_KEY=EXAMPLE_API_KEY
-  #     - TOPIC_EVENTS=smartreader/+/events
-  #     - TOPIC_COMMAND_CONTROL_RESPONSE=smartreader/+/command/control/response
-  #     - TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
-  #     - TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
-  #     - TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
-  #     - CA_PATH=/certs/ca
-  #     - DEVICE_CERT_PATH=/certs/devices
-  #   networks:
-  #     - internal_network
-  #   volumes:
-  #     - ./:/app                  # Mount current directory inside the container
-  #     - certs-volume:/certs      # Mount the certificate volume
-  #   depends_on:
-  #     - mongo
-  #     - mosquitto
-  #     - prometheus
-  #     - grafana
+  app:
+    build: .
+    ports:
+      - "3000:3000"      # Application port
+      - "9229:9229"      # Debugging port
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/smartreader
+      - MQTT_URL=mqtt://mosquitto:1883
+      - API_KEY=EXAMPLE_API_KEY
+      - TOPIC_EVENTS=smartreader/+/events
+      - TOPIC_COMMAND_CONTROL_RESPONSE=smartreader/+/command/control/response
+      - TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
+      - TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
+      - TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
+      - CA_PATH=/certs/ca
+      - DEVICE_CERT_PATH=/certs/devices
+    networks:
+      - internal_network
+    volumes:
+      - ./:/app                  # Mount current directory inside the container
+      - certs-volume:/certs      # Mount the certificate volume
+    depends_on:
+      - mongo
+      - mosquitto
+      - prometheus
+      - grafana
 
   mongo:
     image: mongo:6.0
@@ -99,16 +99,16 @@ services:
     networks:
       - internal_network
       
-  # frontend:
-  #   build:
-  #     context: ./smartreader-frontend
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3002:80"
-  #   depends_on:
-  #     - app
-  #   networks:
-  #     - internal_network
+  frontend:
+    build:
+      context: ./smartreader-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3002:80"
+    depends_on:
+      - app
+    networks:
+      - internal_network
 
 networks:
   internal_network:
