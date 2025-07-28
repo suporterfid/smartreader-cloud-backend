@@ -121,6 +121,15 @@ export class MqttService implements OnModuleInit {
         payload: { ...payload, deviceSerial },
       };
       this.eventBuffer.push(event);
+    } else if (payload['smartreader-mqtt-status']) {
+      const deviceSerial = payload.deviceSerial || payload.readerName;
+      const event = {
+        eventType: 'mqttConnection',
+        deviceSerial,
+        timestamp: new Date(),
+        payload: { ...payload, deviceSerial },
+      };
+      this.eventBuffer.push(event);
     } else if (Array.isArray(payload)) {
       payload.forEach((event: any) => this.eventBuffer.push(event));
     } else {
