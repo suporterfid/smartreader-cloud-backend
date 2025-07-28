@@ -130,6 +130,18 @@ export class MqttService implements OnModuleInit {
         payload: { ...payload, deviceSerial },
       };
       this.eventBuffer.push(event);
+    } else if (
+      typeof payload.status === 'string' &&
+      ['running', 'idle', 'iddle'].includes(payload.status.toLowerCase())
+    ) {
+      const deviceSerial = payload.deviceSerial || payload.readerName;
+      const event = {
+        eventType: 'inventoryStatus',
+        deviceSerial,
+        timestamp: new Date(),
+        payload: { ...payload, deviceSerial },
+      };
+      this.eventBuffer.push(event);
     } else if (Array.isArray(payload)) {
       payload.forEach((event: any) => this.eventBuffer.push(event));
     } else {
