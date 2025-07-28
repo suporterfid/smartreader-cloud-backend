@@ -88,7 +88,36 @@ export class MqttService implements OnModuleInit {
 
   private async handleEventPayload(payload: any) {
     this.logger.log(`Buffering event: ${JSON.stringify(payload)}`);
-    this.eventBuffer.push(payload);
+
+    // New tag read event format
+    if (payload.tag_reads && Array.isArray(payload.tag_reads)) {
+      payload.tag_reads.forEach((tag: any) => {
+        const event = {
+          eventType: 'tagRead',
+          deviceSerial: payload.deviceSerial || payload.readerName,
+          timestamp: tag.firstSeenTimestamp
+            ? new Date(Math.floor(tag.firstSeenTimestamp / 1000))
+            : new Date(),
+          payload: {
+            epc: tag.epc,
+            antenna: tag.antennaPort,
+            rssi: tag.peakRssi,
+            antennaZone: tag.antennaZone,
+            txPower: tag.txPower,
+            tagDataKey: tag.tagDataKey,
+            tagDataKeyName: tag.tagDataKeyName,
+            tagDataSerial: tag.tagDataSerial,
+            deviceSerial: payload.deviceSerial || payload.readerName,
+          },
+        };
+        this.eventBuffer.push(event);
+      });
+    } else if (Array.isArray(payload)) {
+      payload.forEach((event: any) => this.eventBuffer.push(event));
+    } else {
+      this.eventBuffer.push(payload);
+    }
+
     if (this.eventBuffer.length >= this.BATCH_SIZE) {
       await this.flushEventBuffer();
     }
