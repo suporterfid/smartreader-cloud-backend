@@ -112,6 +112,15 @@ export class MqttService implements OnModuleInit {
         };
         this.eventBuffer.push(event);
       });
+    } else if (payload.eventType === 'status' && payload.component === 'smartreader') {
+      const deviceSerial = payload.deviceSerial || payload.SerialNumber || payload.readerName;
+      const event = {
+        eventType: 'status',
+        deviceSerial,
+        timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+        payload: { ...payload, deviceSerial },
+      };
+      this.eventBuffer.push(event);
     } else if (Array.isArray(payload)) {
       payload.forEach((event: any) => this.eventBuffer.push(event));
     } else {
