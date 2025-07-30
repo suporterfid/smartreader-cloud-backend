@@ -13,6 +13,7 @@ A backend application for managing, monitoring, and interacting with IoT and RFI
 - **Event Tracking:** Stores and processes device-generated events.
 - **Metrics & Monitoring:** Tracks system load, uptime, resource usage, and device connectivity.
 - **Webhook Integration:** Allows external services to subscribe to real-time device events.
+- **Reference Lists:** Receive reference lists over HTTP or MQTT and query them dynamically.
 - **Prometheus & Grafana Integration:** Provides real-time system monitoring with a `/metrics` endpoint for Prometheus scraping.
 - **Swagger API Documentation:** Built-in API documentation for easy exploration and testing.
 - **Postman Collection:** [API cURL Examples](api-curl-examples.md) included for easy API testing.
@@ -75,6 +76,7 @@ Ensure you have the following installed:
    TOPIC_COMMAND_MANAGEMENT_RESPONSE=smartreader/+/command/management/response
    TOPIC_COMMAND_CONTROL_PUBLISH=smartreader/{deviceSerial}/command/control
    TOPIC_COMMAND_MANAGEMENT_PUBLISH=smartreader/{deviceSerial}/command/management
+   TOPIC_REFERENCE_LISTS=reference-lists
    ```
 
 ---
