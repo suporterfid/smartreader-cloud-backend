@@ -79,7 +79,7 @@ export class MqttService implements OnModuleInit {
         } else if (topic.includes('command/control/response') || topic.includes('command/management/response')) {
           payload.deviceSerial = deviceSerial;
           await this.handleCommandResponse(deviceSerial, payload);
-        } else if (topic.includes('reference-lists')) {
+        } else if (topic === this.topics.referenceLists) {
           await this.referenceListsService.upsertReferenceList(payload);
         }
       } catch (error) {
