@@ -4,7 +4,8 @@ import { connect, MqttClient } from 'mqtt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventsService } from '../events/events.service';
 import { CommandsService } from '../commands/commands.service';
-import { DevicesService } from '../devices/devices.service'; // Import DevicesService
+import { DevicesService } from '../devices/devices.service';
+import { ReferenceListsService } from '../reference-lists/reference-lists.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -25,13 +26,15 @@ export class MqttService implements OnModuleInit {
     managementResponse: process.env.TOPIC_COMMAND_MANAGEMENT_RESPONSE || 'smartreader/+/command/management/response',
     controlPublish: process.env.TOPIC_COMMAND_CONTROL_PUBLISH || 'smartreader/{deviceSerial}/command/control',
     managementPublish: process.env.TOPIC_COMMAND_MANAGEMENT_PUBLISH || 'smartreader/{deviceSerial}/command/management',
+    referenceLists: process.env.TOPIC_REFERENCE_LISTS || 'reference-lists',
   };
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly eventsService: EventsService,
     private readonly commandsService: CommandsService,
-    private readonly devicesService: DevicesService, // Inject DevicesService
+    private readonly devicesService: DevicesService,
+    private readonly referenceListsService: ReferenceListsService,
   ) {
     setInterval(() => this.flushEventBuffer(), this.BATCH_INTERVAL_MS);
   }
@@ -45,6 +48,7 @@ export class MqttService implements OnModuleInit {
           [this.topics.events]: { qos: 1 },
           [this.topics.controlResponse]: { qos: 1 },
           [this.topics.managementResponse]: { qos: 1 },
+          [this.topics.referenceLists]: { qos: 1 },
         },
         (err) => {
           if (err) {
@@ -75,6 +79,8 @@ export class MqttService implements OnModuleInit {
         } else if (topic.includes('command/control/response') || topic.includes('command/management/response')) {
           payload.deviceSerial = deviceSerial;
           await this.handleCommandResponse(deviceSerial, payload);
+        } else if (topic.includes('reference-lists')) {
+          await this.referenceListsService.upsertReferenceList(payload);
         }
       } catch (error) {
         this.logger.error('Error processing MQTT message', error);

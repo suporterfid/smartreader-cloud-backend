@@ -5,10 +5,16 @@ import { MqttService } from './mqtt.service';
 import { MqttController } from './mqtt.controller';
 import { EventsModule } from '../events/events.module';
 import { CommandsModule } from '../commands/commands.module';
+import { ReferenceListsModule } from '../reference-lists/reference-lists.module';
 
 
 @Module({
-  imports: [EventEmitterModule.forRoot(), EventsModule, CommandsModule],
+  imports: [
+    EventEmitterModule.forRoot(),
+    EventsModule,
+    CommandsModule,
+    ReferenceListsModule,
+  ],
   providers: [MqttService],
   controllers: [MqttController],
   exports: [MqttService],

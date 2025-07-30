@@ -28,6 +28,7 @@ import { Command, CommandSchema } from './commands/schemas/command.schema';
 // New Modules for Device Provisioning
 import { ProvisioningModule } from './provisioning/provisioning.module';
 import { CertificatesModule } from './certificates/certificates.module';
+import { ReferenceListsModule } from './reference-lists/reference-lists.module';
 
 @Module({
   imports: [
@@ -65,7 +66,8 @@ import { CertificatesModule } from './certificates/certificates.module';
     DeviceGroupsModule,
     // Add the new modules
     ProvisioningModule,
-    CertificatesModule
+    CertificatesModule,
+    ReferenceListsModule
   ],
   providers: [
     {
